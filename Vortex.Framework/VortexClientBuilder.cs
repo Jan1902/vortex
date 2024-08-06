@@ -1,4 +1,6 @@
 ﻿using Autofac;
+using Serilog;
+using Serilog.Extensions.Autofac.DependencyInjection;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking;
 
@@ -45,6 +47,11 @@ public class VortexClientBuilder
     public IVortexClient Build()
     {
         var containerBuilder = new ContainerBuilder();
+
+        var loggerConfiguration = new LoggerConfiguration()
+            .WriteTo.Console();
+
+        containerBuilder.RegisterSerilog(loggerConfiguration);
 
         containerBuilder.RegisterType<VortexClientFacade>().AsImplementedInterfaces();
         containerBuilder.RegisterInstance(_configuration);

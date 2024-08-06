@@ -6,7 +6,7 @@ using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.Networking;
 
-internal class NetworkingConnection(VortexClientConfiguration configuration, ILogger<NetworkingConnection> logger, NetworkingController packetManager, PacketSerializer packetSerializer)
+internal class NetworkingConnection(VortexClientConfiguration configuration, ILogger<NetworkingConnection> logger, NetworkingController packetManager, PacketSerializer packetSerializer) : INetworkingConnection
 {
     private readonly RecyclableMemoryStreamManager _streamManager = new();
 
@@ -27,13 +27,13 @@ internal class NetworkingConnection(VortexClientConfiguration configuration, ILo
         try
         {
             await _socket.ConnectAsync(configuration.Hostname, configuration.Port);
-            logger.LogInformation("Connected to Server at {host}: {port}", configuration.Hostname, configuration.Port);
+            logger.LogInformation("Connected to server at {host}: {port}", configuration.Hostname, configuration.Port);
             // TODO: Send Connection Established Message
             _socket.BeginReceive(_buffer, 0, _buffer.Length, 0, new AsyncCallback(ReceiveCallback), null);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Error connecting to Host {host} at Port {port}", configuration.Hostname, configuration.Port);
+            logger.LogError(e, "Error connecting to host {host} at port {port}", configuration.Hostname, configuration.Port);
             throw;
         }
     }
@@ -60,7 +60,7 @@ internal class NetworkingConnection(VortexClientConfiguration configuration, ILo
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Error sending packet with OP Code {op} and size {size} to server", opCode, data.Length);
+            logger.LogError(e, "Error sending packet with OP code {op} and size {size} to server", opCode, data.Length);
             throw;
         }
     }
@@ -81,12 +81,12 @@ internal class NetworkingConnection(VortexClientConfiguration configuration, ILo
             else
             {
                 // TODO: Send connection terminated message
-                logger.LogWarning("Connection to Server has been terminated");
+                logger.LogWarning("Connection to server has been terminated");
             }
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Error receiving Data from Server");
+            logger.LogError(e, "Error receiving data from server");
             throw;
         }
     }
