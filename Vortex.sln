@@ -1,0 +1,88 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34607.79
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Framework", "Vortex.Framework\Vortex.Framework.csproj", "{2A8FD48D-E7AB-469E-B5C1-49B0E022F667}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Framework", "Framework", "{DA4B1BD8-3B25-4A47-9D6A-A7A8166A2E35}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Bot", "Bot", "{9DCE2B61-C12D-446F-BAC0-174C19A9D553}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{62BE5ADE-B9BD-44C4-9448-0E0335484D9D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Framework.Abstraction", "Vortex.Framework.Abstraction\Vortex.Framework.Abstraction.csproj", "{63B9457E-BCD8-4609-AD4A-8E43E340F427}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6D84526F-8FB9-477E-A940-177702768D84}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.Chat", "Vortex.Modules.Chat\Vortex.Modules.Chat.csproj", "{3C5C81B5-6758-4741-9745-A7E1FBDDDA66}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Bot", "Vortex.Bot\Vortex.Bot.csproj", "{39F2D647-0A41-4C02-A73F-766C3CB5DC33}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.Networking", "Vortex.Modules.Networking\Vortex.Modules.Networking.csproj", "{CEB31D51-525F-43B2-8581-3B80DE7F0618}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.Networking.Abstraction", "Vortex.Modules.Networking.Abstraction\Vortex.Modules.Networking.Abstraction.csproj", "{3B78C358-66C4-4951-9EC1-BFE8D9B51CC1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Shared", "Vortex.Shared\Vortex.Shared.csproj", "{34881973-6BDE-4574-8BC5-4CE8B6B6CAB8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vortex.Modules.Networking.CodeGeneration", "Vortex.Modules.Networking.CodeGeneration\Vortex.Modules.Networking.CodeGeneration.csproj", "{C3EB589F-F03B-487A-9B3A-C8E0FCD5ADA2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2A8FD48D-E7AB-469E-B5C1-49B0E022F667}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A8FD48D-E7AB-469E-B5C1-49B0E022F667}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A8FD48D-E7AB-469E-B5C1-49B0E022F667}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A8FD48D-E7AB-469E-B5C1-49B0E022F667}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63B9457E-BCD8-4609-AD4A-8E43E340F427}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63B9457E-BCD8-4609-AD4A-8E43E340F427}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63B9457E-BCD8-4609-AD4A-8E43E340F427}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63B9457E-BCD8-4609-AD4A-8E43E340F427}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C5C81B5-6758-4741-9745-A7E1FBDDDA66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C5C81B5-6758-4741-9745-A7E1FBDDDA66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C5C81B5-6758-4741-9745-A7E1FBDDDA66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C5C81B5-6758-4741-9745-A7E1FBDDDA66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39F2D647-0A41-4C02-A73F-766C3CB5DC33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39F2D647-0A41-4C02-A73F-766C3CB5DC33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39F2D647-0A41-4C02-A73F-766C3CB5DC33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39F2D647-0A41-4C02-A73F-766C3CB5DC33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEB31D51-525F-43B2-8581-3B80DE7F0618}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB31D51-525F-43B2-8581-3B80DE7F0618}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEB31D51-525F-43B2-8581-3B80DE7F0618}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEB31D51-525F-43B2-8581-3B80DE7F0618}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B78C358-66C4-4951-9EC1-BFE8D9B51CC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B78C358-66C4-4951-9EC1-BFE8D9B51CC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B78C358-66C4-4951-9EC1-BFE8D9B51CC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B78C358-66C4-4951-9EC1-BFE8D9B51CC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34881973-6BDE-4574-8BC5-4CE8B6B6CAB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34881973-6BDE-4574-8BC5-4CE8B6B6CAB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34881973-6BDE-4574-8BC5-4CE8B6B6CAB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34881973-6BDE-4574-8BC5-4CE8B6B6CAB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3EB589F-F03B-487A-9B3A-C8E0FCD5ADA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3EB589F-F03B-487A-9B3A-C8E0FCD5ADA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3EB589F-F03B-487A-9B3A-C8E0FCD5ADA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3EB589F-F03B-487A-9B3A-C8E0FCD5ADA2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2A8FD48D-E7AB-469E-B5C1-49B0E022F667} = {DA4B1BD8-3B25-4A47-9D6A-A7A8166A2E35}
+		{63B9457E-BCD8-4609-AD4A-8E43E340F427} = {DA4B1BD8-3B25-4A47-9D6A-A7A8166A2E35}
+		{3C5C81B5-6758-4741-9745-A7E1FBDDDA66} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
+		{39F2D647-0A41-4C02-A73F-766C3CB5DC33} = {9DCE2B61-C12D-446F-BAC0-174C19A9D553}
+		{CEB31D51-525F-43B2-8581-3B80DE7F0618} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
+		{3B78C358-66C4-4951-9EC1-BFE8D9B51CC1} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
+		{34881973-6BDE-4574-8BC5-4CE8B6B6CAB8} = {DA4B1BD8-3B25-4A47-9D6A-A7A8166A2E35}
+		{C3EB589F-F03B-487A-9B3A-C8E0FCD5ADA2} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6A5C458F-FABD-4AEE-BA45-0A1378350F77}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Debugging": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\Vortex.Modules.Networking\\Vortex.Modules.Networking.csproj"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+using Vortex.Modules.Networking.Abstraction;
+
+namespace {{namespace}};
+
+public class {{type}}Serializer
+{
+    public void SerializeModel({{type}} subject, IMinecraftBinaryWriter writer)
+    {
+        {{serializeContent}}
+    }
+
+    public {{type}} DeserializeModel(IMinecraftBinaryReader reader)
+    {
+        {{deserializeContent}}
+    }
+}
