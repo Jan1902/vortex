@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using System.Net.Sockets;
 using System.Reflection;
 using Vortex.Modules.Networking.Abstraction;
 
@@ -16,23 +17,13 @@ public class PacketSerializer
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            foreach (var type in assembly.GetTypes())
+            foreach (var packetType in assembly.GetTypes().Where(t => t.IsAssignableTo(typeof(PacketBase))))
             {
-                if (IsAssignableToGenericType(type, typeof(IPacketHandler<>)))
-                {
-                    var packetTypes = type.GetInterfaces()
-                        .Where(i => i.IsClosedTypeOf(typeof(IPacketHandler<>)))
-                        .Select(i => i.GetGenericArguments()[0]);
+                var id = packetType.GetCustomAttribute<PacketAttribute>()?.PacketId;
+                if (id is null)
+                    continue;
 
-                    foreach (var packetType in packetTypes)
-                    {
-                        var id = packetType.GetCustomAttribute<PacketAttribute>()?.PacketId;
-                        if (id is null)
-                            return;
-
-                        packets.Add((packetType, id.Value));
-                    }
-                }
+                packets.Add((packetType, id.Value));
             }
         }
 
@@ -80,12 +71,12 @@ public class PacketSerializer
             ?? throw new Exception("Could not find Serializer Mapping for Packet Type");
 
         var serializer = Activator.CreateInstance(mapping.SerializerType);
-        var serializeMethodInfo = typeof(IPacketSerializer<>).MakeGenericType(packetType).GetMethod(nameof(IPacketSerializer<HandshakePacket>.DeserializePacket))!;
+        var serializeMethodInfo = typeof(IPacketSerializer<>).MakeGenericType(packetType).GetMethod(nameof(IPacketSerializer<HandshakePacket>.SerializePacket))!;
 
         using var stream = new MemoryStream();
         using var writer = new MinecraftBinaryWriter(stream);
 
-        serializeMethodInfo.Invoke(serializer, [writer, packet]);
+        serializeMethodInfo.Invoke(serializer, [packet, writer]);
 
         return stream.ToArray();
     }

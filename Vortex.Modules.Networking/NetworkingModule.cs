@@ -13,10 +13,6 @@ public class NetworkingModule : IModule
         builder.RegisterType<PacketSerializer>().SingleInstance();
 
         builder.RegisterPacketHandler<NetworkingPacketHandler>();
-    }
-
-    public void Setup(IComponentContext context)
-    {
-        context.Resolve<NetworkingController>().Setup();
+        builder.RegisterType<NetworkingEventHandler>().AsImplementedInterfaces();
     }
 }

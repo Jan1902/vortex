@@ -1,14 +1,36 @@
-﻿using Vortex.Framework.Abstraction;
+﻿using Autofac;
+using Microsoft.Extensions.Logging;
+using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Framework;
 
-internal class VortexClientFacade(VortexClientConfiguration configuration, INetworkingConnection connection) : IVortexClient
+internal class VortexClientFacade(
+    IComponentContext context,
+    INetworkingConnection connection,
+    ILogger<VortexClientFacade> logger) : IVortexClient
 {
-    private readonly VortexClientConfiguration _configuration = configuration;
-
     public async Task StartAsync()
     {
+        logger.LogInformation("Starting Vortex client...");
+
+        logger.LogInformation("Initializing modules...");
+
+        var toInit = context.Resolve<IEnumerable<IInitialize>>();
+
+        foreach (var init in toInit)
+            init.Initialize();
+
+        var toInitAsync = context.Resolve<IEnumerable<IInitializeAsync>>();
+        await Task.WhenAll(toInitAsync.Select(s => s.InitializeAsync()));
+
+        logger.LogInformation("Initialization complete.");
+        logger.LogInformation("Connecting to server...");
+
         await connection.Connect();
+        while (true)
+        {
+            // Do nothing
+        }
     }
 }

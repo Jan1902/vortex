@@ -12,6 +12,6 @@ public class ChatModule : IModule
 
     public void Setup(IComponentContext context)
     {
-        throw new NotImplementedException();
+        
     }
 }

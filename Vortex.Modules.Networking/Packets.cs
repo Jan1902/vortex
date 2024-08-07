@@ -12,7 +12,7 @@ public record LoginStartPacket(string Name, Guid Uuid) : PacketBase;
 public record LoginSuccessPacket(Guid Uuid, string Username, Property[] Properties, bool StrictErrorHandling) : PacketBase;
 
 [PacketModel]
-public record Property(string Name, string Value, bool IsSigned, string Signature) : PacketBase;
+public record Property(string Name, string Value, bool IsSigned, string Signature);
 
 [AutoSerializedPacket(0x00)]
 public record LoginDisconnectPacket(string Reason) : PacketBase;

@@ -1,11 +1,12 @@
 ﻿using Autofac;
+using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Reflection;
 using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.Networking;
 
-internal class NetworkingController(IComponentContext componentContext, PacketSerializer packetSerializer)
+internal class NetworkingController(IComponentContext componentContext, PacketSerializer packetSerializer, ILogger<NetworkingController> logger)
 {
     private ProtocolState _state;
 
@@ -21,7 +22,7 @@ internal class NetworkingController(IComponentContext componentContext, PacketSe
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            foreach (var packetType in assembly.GetTypes().Where(t => t.IsAssignableFrom(typeof(PacketBase))))
+            foreach (var packetType in assembly.GetTypes().Where(t => t.IsAssignableTo(typeof(PacketBase))))
             {
                 var attribute = packetType.GetCustomAttribute<PacketAttribute>(true);
                 if (attribute is null)
@@ -38,6 +39,8 @@ internal class NetworkingController(IComponentContext componentContext, PacketSe
 
     public async Task HandlePacket(int packetId, byte[] data)
     {
+        logger.LogInformation($"Received packet with packet id {packetId}");
+
         var registration = _packetRegistrations?.FirstOrDefault(r => r.PacketId == packetId);
         if (registration is null)
             return;
@@ -53,8 +56,8 @@ internal class NetworkingController(IComponentContext componentContext, PacketSe
 
         foreach (var handler in registration!.Handlers)
         {
-            var handleMethod = handler.GetType().GetMethod(nameof(IPacketHandler<HandshakePacket>.HandleAsync))!.MakeGenericMethod(registration.PacketType);
-            var task = handleMethod.Invoke(handler, [packet]);
+            var handleMethod = handler.GetType().GetMethod(nameof(IPacketHandler<HandshakePacket>.HandleAsync), [packetType]);
+            var task = handleMethod?.Invoke(handler, [packet]);
             await ((Task?) task ?? Task.CompletedTask);
         }
     }

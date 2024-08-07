@@ -82,6 +82,7 @@ public class PacketSerializerGenerator : ISourceGenerator
             var writerMethod = MapTypeToReaderWriterMethod(parameterType);
             if (isArray)
             {
+                builder.AppendLine($"writer.WriteVarInt(subject.{parameterName}.Length);");
                 builder.AppendLine($"for (int i = 0; i < subject.{parameterName}.Length; i++)");
                 builder.AppendLine("{");
 

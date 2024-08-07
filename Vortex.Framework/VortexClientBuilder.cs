@@ -55,10 +55,11 @@ public class VortexClientBuilder
 
         containerBuilder.RegisterType<VortexClientFacade>().AsImplementedInterfaces();
         containerBuilder.RegisterInstance(_configuration);
+        containerBuilder.RegisterType<EventBus>().SingleInstance().AsImplementedInterfaces();
 
         foreach (var module in _loadedModules)
         {
-            var instance = (IModule) Activator.CreateInstance(module)!;
+            var instance = (IModule)Activator.CreateInstance(module)!;
             instance.Load(containerBuilder);
         }
 

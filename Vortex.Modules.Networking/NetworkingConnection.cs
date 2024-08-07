@@ -2,11 +2,17 @@
 using Microsoft.IO;
 using System.Net.Sockets;
 using Vortex.Framework;
+using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.Networking;
 
-internal class NetworkingConnection(VortexClientConfiguration configuration, ILogger<NetworkingConnection> logger, NetworkingController packetManager, PacketSerializer packetSerializer) : INetworkingConnection
+internal class NetworkingConnection(
+    VortexClientConfiguration configuration,
+    ILogger<NetworkingConnection> logger,
+    NetworkingController packetManager,
+    IEventBus eventBus,
+    PacketSerializer packetSerializer) : INetworkingConnection
 {
     private readonly RecyclableMemoryStreamManager _streamManager = new();
 
@@ -22,13 +28,15 @@ internal class NetworkingConnection(VortexClientConfiguration configuration, ILo
     {
         if (configuration.Hostname == default
             || configuration.Port == default)
-            throw new ArgumentException("Invalid Connection Information specified in Lyrox Configuration!");
+            throw new ArgumentException("Invalid connection information specified in configuration!");
 
         try
         {
             await _socket.ConnectAsync(configuration.Hostname, configuration.Port);
             logger.LogInformation("Connected to server at {host}: {port}", configuration.Hostname, configuration.Port);
-            // TODO: Send Connection Established Message
+
+            await eventBus.PublishAsync(new ConnectionEstablishedEvent());
+
             _socket.BeginReceive(_buffer, 0, _buffer.Length, 0, new AsyncCallback(ReceiveCallback), null);
         }
         catch (Exception e)
@@ -80,7 +88,6 @@ internal class NetworkingConnection(VortexClientConfiguration configuration, ILo
             }
             else
             {
-                // TODO: Send connection terminated message
                 logger.LogWarning("Connection to server has been terminated");
             }
         }
