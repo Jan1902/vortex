@@ -29,7 +29,10 @@ internal class EventBus(IComponentContext context) : IEventBus, IInitialize
 
     public async Task PublishAsync<TEvent>(TEvent @event)
     {
+        if (!_handlers.ContainsKey(typeof(TEvent)))
+            return;
+
         foreach (var handler in _handlers[typeof(TEvent)])
-            await ((Task?) handler.GetType().GetMethod(nameof(IEventHandler<TEvent>.HandleAsync))?.Invoke(handler, [@event]) ?? Task.CompletedTask);
+            await ((Task?) typeof(IEventHandler<TEvent>).GetMethod(nameof(IEventHandler<TEvent>.HandleAsync))?.Invoke(handler, [@event]) ?? Task.CompletedTask);
     }
 }

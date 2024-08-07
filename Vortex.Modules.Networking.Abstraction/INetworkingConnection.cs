@@ -1,6 +1,4 @@
-﻿using Vortex.Modules.Networking.Abstraction;
-
-namespace Vortex.Modules.Networking.Abstraction;
+﻿namespace Vortex.Modules.Networking.Abstraction;
 
 public interface INetworkingConnection
 {

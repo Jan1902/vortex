@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Vortex.Framework.Abstraction\Vortex.Framework.Abstraction.csproj" />
     <ProjectReference Include="..\Vortex.Shared\Vortex.Shared.csproj" />
   </ItemGroup>
 

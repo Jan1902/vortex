@@ -14,7 +14,5 @@ public static class BuilderExtensions
     /// <param name="builder">The Autofac container builder.</param>
     public static void RegisterPacketHandler<THandler>(this ContainerBuilder builder)
         where THandler : class
-    {
-        builder.RegisterType<THandler>().AsImplementedInterfaces();
-    }
+        => builder.RegisterType<THandler>().AsImplementedInterfaces();
 }

@@ -1,6 +1,12 @@
-﻿namespace Vortex.Modules.Networking.Abstraction;
+﻿using Vortex.Framework.Abstraction;
 
-public interface IPacketHandler<TPacket> where TPacket : PacketBase
+namespace Vortex.Modules.Networking.Abstraction;
+
+public interface IPacketHandler<TPacket> : IEventHandler<PacketReceivedEvent<TPacket>>
+    where TPacket : PacketBase
 {
+    Task IEventHandler<PacketReceivedEvent<TPacket>>.HandleAsync(PacketReceivedEvent<TPacket> @event)
+        => HandleAsync(@event.Packet);
+
     Task HandleAsync(TPacket packet);
 }

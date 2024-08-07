@@ -1,25 +1,27 @@
 ﻿using Autofac;
 using Microsoft.Extensions.Logging;
-using System.Collections;
 using System.Reflection;
+using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.Networking;
 
-internal class NetworkingController(IComponentContext componentContext, PacketSerializer packetSerializer, ILogger<NetworkingController> logger)
+internal class NetworkingController(
+    IComponentContext componentContext,
+    PacketSerializer packetSerializer,
+    ILogger<NetworkingController> logger,
+    IEventBus eventBus) : IInitialize
 {
     private ProtocolState _state;
 
     private readonly IComponentContext _componentContext = componentContext;
 
-    private PacketRegistration[]? _packetRegistrations;
+    private Dictionary<int, Type> _packetRegistrations = [];
 
     public void SetState(ProtocolState state) => _state = state;
 
-    public void Setup()
+    public void Initialize()
     {
-        var registrations = new List<PacketRegistration>();
-
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             foreach (var packetType in assembly.GetTypes().Where(t => t.IsAssignableTo(typeof(PacketBase))))
@@ -28,25 +30,17 @@ internal class NetworkingController(IComponentContext componentContext, PacketSe
                 if (attribute is null)
                     continue;
 
-                var handlers = (IEnumerable)_componentContext.Resolve(typeof(IEnumerable<>).MakeGenericType(typeof(IPacketHandler<>).MakeGenericType(packetType)));
-
-                registrations.Add(new(attribute.PacketId, attribute.State, packetType, [.. handlers]));
+                _packetRegistrations[attribute.PacketId] = packetType;
             }
         }
-
-        _packetRegistrations = [.. registrations];
     }
 
     public async Task HandlePacket(int packetId, byte[] data)
     {
-        logger.LogInformation($"Received packet with packet id {packetId}");
+        logger.LogInformation("Received packet with packet id {packetId}", packetId);
 
-        var registration = _packetRegistrations?.FirstOrDefault(r => r.PacketId == packetId);
+        var registration = _packetRegistrations.GetValueOrDefault(packetId);
         if (registration is null)
-            return;
-
-        var packetType = registration?.PacketType;
-        if (packetType is null)
             return;
 
         using var stream = new MemoryStream(data);
@@ -54,12 +48,10 @@ internal class NetworkingController(IComponentContext componentContext, PacketSe
 
         var packet = packetSerializer.DeserializePacket(packetId, reader);
 
-        foreach (var handler in registration!.Handlers)
-        {
-            var handleMethod = handler.GetType().GetMethod(nameof(IPacketHandler<HandshakePacket>.HandleAsync), [packetType]);
-            var task = handleMethod?.Invoke(handler, [packet]);
-            await ((Task?) task ?? Task.CompletedTask);
-        }
+        var eventType = typeof(PacketReceivedEvent<>).MakeGenericType(registration);
+        var packetReceivedEvent = Activator.CreateInstance(eventType, [packet]);
+
+        await ((Task?) typeof(IEventBus).GetMethod(nameof(IEventBus.PublishAsync))?.MakeGenericMethod(eventType).Invoke(eventBus, [packetReceivedEvent]) ?? Task.CompletedTask);
     }
 }
 
