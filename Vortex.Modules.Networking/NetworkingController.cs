@@ -12,11 +12,11 @@ internal class NetworkingController(
     ILogger<NetworkingController> logger,
     IEventBus eventBus) : IInitialize
 {
-    private ProtocolState _state;
+    private ProtocolState _state = ProtocolState.Handshake;
 
     private readonly IComponentContext _componentContext = componentContext;
 
-    private Dictionary<int, Type> _packetRegistrations = [];
+    private List<PacketRegistration> _packetRegistrations = [];
 
     public void SetState(ProtocolState state) => _state = state;
 
@@ -30,29 +30,35 @@ internal class NetworkingController(
                 if (attribute is null)
                     continue;
 
-                _packetRegistrations[attribute.PacketId] = packetType;
+                if (attribute.PacketDirection == PacketDirection.ServerBound)
+                    continue;
+
+                _packetRegistrations.Add(new(attribute.PacketId, attribute.State, packetType));
             }
         }
     }
 
     public async Task HandlePacket(int packetId, byte[] data)
     {
-        logger.LogInformation("Received packet with packet id {packetId}", packetId);
-
-        var registration = _packetRegistrations.GetValueOrDefault(packetId);
+        var registration = _packetRegistrations.FirstOrDefault(p => p.PacketId == packetId && p.State == _state);
         if (registration is null)
+        {
+            logger.LogInformation("Received unknown packet with id {packetId}", packetId);
             return;
+        }
 
         using var stream = new MemoryStream(data);
         using var reader = new MinecraftBinaryReader(stream);
 
-        var packet = packetSerializer.DeserializePacket(packetId, reader);
+        var packet = packetSerializer.DeserializePacket(registration.PacketType, reader);
 
-        var eventType = typeof(PacketReceivedEvent<>).MakeGenericType(registration);
+        logger.LogInformation("Received packet of type {packetType}", packet.GetType().Name);
+
+        var eventType = typeof(PacketReceivedEvent<>).MakeGenericType(registration.PacketType);
         var packetReceivedEvent = Activator.CreateInstance(eventType, [packet]);
 
         await ((Task?) typeof(IEventBus).GetMethod(nameof(IEventBus.PublishAsync))?.MakeGenericMethod(eventType).Invoke(eventBus, [packetReceivedEvent]) ?? Task.CompletedTask);
     }
 }
 
-internal record PacketRegistration(int PacketId, ProtocolState State, Type PacketType, object[] Handlers);
+internal record PacketRegistration(int PacketId, ProtocolState State, Type PacketType);

@@ -52,9 +52,9 @@ public class PacketSerializer
     public int? GetOpCode(Type packetType)
         => _mappings.FirstOrDefault(m => m.PacketType == packetType)?.PacketId;
 
-    public object DeserializePacket(int packetId, MinecraftBinaryReader reader)
+    public object DeserializePacket(Type packetType, MinecraftBinaryReader reader)
     {
-        var mapping = _mappings.FirstOrDefault(m => m.PacketId == packetId)
+        var mapping = _mappings.FirstOrDefault(m => m.PacketType == packetType)
             ?? throw new Exception("Could not find Serializer Mapping for Packet Type");
 
         var serializer = Activator.CreateInstance(mapping.SerializerType);

@@ -65,6 +65,8 @@ internal class NetworkingConnection(
         try
         {
             await _socket.SendAsync(stream.ToArray(), SocketFlags.None);
+
+            logger.LogInformation("Sent packet of type {packetType}", packet.GetType().Name);
         }
         catch (Exception e)
         {

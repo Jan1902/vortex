@@ -2,6 +2,7 @@
 using Serilog;
 using Serilog.Extensions.Autofac.DependencyInjection;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.Chat;
 using Vortex.Modules.Networking;
 
 namespace Vortex.Framework;
@@ -12,7 +13,11 @@ namespace Vortex.Framework;
 public class VortexClientBuilder
 {
     private readonly VortexClientConfiguration _configuration = new();
-    private readonly List<Type> _loadedModules = [typeof(NetworkingModule)];
+    private readonly List<Type> _loadedModules =
+        [
+            typeof(NetworkingModule),
+            typeof(ChatModule)
+        ];
 
     /// <summary>
     /// Sets the hostname and port to connect to.

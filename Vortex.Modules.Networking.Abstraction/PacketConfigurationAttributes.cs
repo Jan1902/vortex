@@ -55,7 +55,7 @@ public class StringLengthAttribute : Attribute
 /// <param name="packetId">The packet ID.</param>
 /// <param name="state">The protocol state.</param>
 [AttributeUsage(AttributeTargets.Class)]
-public class AutoSerializedPacketAttribute(int packetId, ProtocolState state = ProtocolState.Play) : PacketAttribute(packetId, state)
+public class AutoSerializedPacketAttribute(int packetId, ProtocolState state = ProtocolState.Play, PacketDirection packetDirection = PacketDirection.ClientBound) : PacketAttribute(packetId, state, packetDirection)
 {
 }
 
@@ -85,7 +85,7 @@ public class CustomSerializedAttribute<TSerializer, TPacket>(int packetId, Proto
 /// <param name="packetId">The packet ID.</param>
 /// <param name="state">The protocol state.</param>
 [AttributeUsage(AttributeTargets.Class)]
-public class PacketAttribute(int packetId, ProtocolState state = ProtocolState.Play) : Attribute
+public class PacketAttribute(int packetId, ProtocolState state = ProtocolState.Play, PacketDirection packetDirection = PacketDirection.ClientBound) : Attribute
 {
     /// <summary>
     /// Gets the packet ID.
@@ -96,6 +96,22 @@ public class PacketAttribute(int packetId, ProtocolState state = ProtocolState.P
     /// Gets the protocol state.
     /// </summary>
     public ProtocolState State { get; } = state;
+
+    /// <summary>
+    /// Gets the packet direction.
+    /// </summary>
+    public PacketDirection PacketDirection { get; } = packetDirection;
+}
+
+[AttributeUsage(AttributeTargets.Parameter)]
+public class ConditionalAttribute(ConditionalType type = ConditionalType.PreviousBoolean) : Attribute
+{
+    public ConditionalType Type { get; } = type;
+}
+
+public enum ConditionalType
+{
+    PreviousBoolean
 }
 
 [AttributeUsage(AttributeTargets.Class)]

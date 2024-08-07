@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vortex.Framework.Abstraction\Vortex.Framework.Abstraction.csproj" />
+    <ProjectReference Include="..\Vortex.Modules.Chat\Vortex.Modules.Chat.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Networking\Vortex.Modules.Networking.csproj" />
   </ItemGroup>
 

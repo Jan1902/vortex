@@ -29,6 +29,7 @@ public class PacketSerializerGenerator : ISourceGenerator
 {
     private const string PacketSerializerTemplateName = "PacketSerializerTemplate";
     private const string ModelSerializerTemplateName = "ModelSerializerTemplate";
+    private const string ConditionalAttributeName = "Conditional";
 
     public void Initialize(GeneratorInitializationContext context)
         => context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
@@ -67,7 +68,9 @@ public class PacketSerializerGenerator : ISourceGenerator
         foreach (var parameter in packet.ParameterList?.Parameters ?? [])
         {
             var parameterName = parameter.Identifier.Text;
+
             var parameterType = parameter.Type?.ToString();
+            parameterType = parameterType?.Replace("?", "");
 
             if (parameterType is null)
                 continue;
@@ -77,6 +80,16 @@ public class PacketSerializerGenerator : ISourceGenerator
             {
                 isArray = true;
                 parameterType = parameterType.Substring(0, parameterType.Length - 2);
+            }
+
+            var conditional = false;
+            if (parameter.AttributeLists.Any(l => l.Attributes.Any(a => a.Name.ToString() == ConditionalAttributeName)))
+            {
+                conditional = true;
+
+                builder.AppendLine($"writer.WriteBool(subject.{parameterName} != default);");
+                builder.AppendLine($"if (subject.{parameterName} != default)");
+                builder.AppendLine("{");
             }
 
             var writerMethod = MapTypeToReaderWriterMethod(parameterType);
@@ -93,6 +106,9 @@ public class PacketSerializerGenerator : ISourceGenerator
 
                 builder.AppendLine("}");
 
+                if (conditional)
+                    builder.AppendLine("}");
+
                 continue;
             }
 
@@ -100,10 +116,16 @@ public class PacketSerializerGenerator : ISourceGenerator
             {
                 builder.AppendLine($"new {parameterType}Serializer().SerializeModel(subject.{parameterName}, writer);");
 
+                if (conditional)
+                    builder.AppendLine("}");
+
                 continue;
             }
 
             builder.AppendLine($"writer.Write{writerMethod}(subject.{parameterName});");
+
+            if (conditional)
+                builder.AppendLine("}");
         }
 
         return builder.ToString();
@@ -121,6 +143,7 @@ public class PacketSerializerGenerator : ISourceGenerator
             parameterName = parameterName.Substring(0, 1).ToLower() + parameterName.Substring(1, parameterName.Length - 1);
 
             var parameterType = parameter.Type?.ToString();
+            parameterType = parameterType?.Replace("?", "");
 
             if (parameterName is null || parameterType is null)
                 continue;
@@ -134,11 +157,24 @@ public class PacketSerializerGenerator : ISourceGenerator
                 parameterType = parameterType.Substring(0, parameterType.Length - 2);
             }
 
+            var conditional = false;
+            if (parameter.AttributeLists.Any(l => l.Attributes.Any(a => a.Name.ToString() == ConditionalAttributeName)))
+                conditional = true;
+
             var readerMethod = MapTypeToReaderWriterMethod(parameterType);
             if (isArray)
             {
+                if (conditional)
+                {
+                    builder.AppendLine($"{parameterType}[]? {parameterName} = null;");
+
+                    builder.AppendLine($"var {parameterName}Exists = reader.ReadBool();");
+                    builder.AppendLine($"if ({parameterName}Exists)");
+                    builder.AppendLine("{");
+                }
+
                 builder.AppendLine($"var {parameterName}Length = reader.ReadVarInt();");
-                builder.AppendLine($"var {parameterName} = new {parameterType}[{parameterName}Length];");
+                builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = new {parameterType}[{parameterName}Length];");
 
                 builder.AppendLine($"for (int i = 0; i < {parameterName}Length; i++)");
                 builder.AppendLine("{");
@@ -150,17 +186,35 @@ public class PacketSerializerGenerator : ISourceGenerator
 
                 builder.AppendLine("}");
 
+                if (conditional)
+                    builder.AppendLine("}");
+
                 continue;
+            }
+
+            if (conditional)
+            {
+                builder.AppendLine($"{parameterType}? {parameterName} = null;");
+
+                builder.AppendLine($"var {parameterName}Exists = reader.ReadBool();");
+                builder.AppendLine($"if ({parameterName}Exists)");
+                builder.AppendLine("{");
             }
 
             if (readerMethod is null)
             {
-                builder.AppendLine($"var {parameterName} = new {parameterType}Serializer().DeserializeModel(reader);");
+                builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = new {parameterType}Serializer().DeserializeModel(reader);");
+
+                if (conditional)
+                    builder.AppendLine("}");
 
                 continue;
             }
 
-            builder.AppendLine($"var {parameterName} = reader.Read{readerMethod}();");
+            builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = reader.Read{readerMethod}();");
+
+            if (conditional)
+                builder.AppendLine("}");
         }
 
         builder.AppendLine($"return new {packet.Identifier.Text}({string.Join(", ", parameters)});");

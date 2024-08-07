@@ -10,4 +10,6 @@ public interface IVortexClient
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task StartAsync();
+
+    Task SendChatMessage(string message);
 }

@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Microsoft.Extensions.Logging;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.Chat.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Framework;
@@ -8,7 +9,8 @@ namespace Vortex.Framework;
 internal class VortexClientFacade(
     IComponentContext context,
     INetworkingConnection connection,
-    ILogger<VortexClientFacade> logger) : IVortexClient
+    ILogger<VortexClientFacade> logger,
+    IChatManager chat) : IVortexClient
 {
     public async Task StartAsync()
     {
@@ -28,9 +30,10 @@ internal class VortexClientFacade(
         logger.LogInformation("Connecting to server...");
 
         await connection.Connect();
-        while (true)
-        {
-            // Do nothing
-        }
+
+        // TODO: Wait until we entered play mode
     }
+
+    public Task SendChatMessage(string message)
+            => chat.SendMessage(message);
 }

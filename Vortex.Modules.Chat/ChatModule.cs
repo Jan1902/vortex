@@ -7,11 +7,6 @@ public class ChatModule : IModule
 {
     public void Load(ContainerBuilder builder)
     {
-        
-    }
-
-    public void Setup(IComponentContext context)
-    {
-        
+        builder.RegisterType<ChatManager>().AsImplementedInterfaces();
     }
 }
