@@ -3,3 +3,5 @@
 public record ConnectionEstablishedEvent;
 
 public record PacketReceivedEvent<TPacket>(TPacket Packet) where TPacket : PacketBase;
+
+public record ProtocolStateChanged(ProtocolState State);

@@ -18,7 +18,12 @@ internal class NetworkingController(
 
     private List<PacketRegistration> _packetRegistrations = [];
 
-    public void SetState(ProtocolState state) => _state = state;
+    public async Task SetState(ProtocolState state)
+    {
+        _state = state;
+
+        await eventBus.PublishAsync(new ProtocolStateChanged(state));
+    }
 
     public void Initialize()
     {
@@ -43,7 +48,7 @@ internal class NetworkingController(
         var registration = _packetRegistrations.FirstOrDefault(p => p.PacketId == packetId && p.State == _state);
         if (registration is null)
         {
-            logger.LogInformation("Received unknown packet with id {packetId}", packetId);
+            logger.LogInformation("Received unknown packet with id 0x{packetId:X2}", packetId);
             return;
         }
 

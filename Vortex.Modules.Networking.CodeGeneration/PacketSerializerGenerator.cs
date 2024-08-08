@@ -30,6 +30,7 @@ public class PacketSerializerGenerator : ISourceGenerator
     private const string PacketSerializerTemplateName = "PacketSerializerTemplate";
     private const string ModelSerializerTemplateName = "ModelSerializerTemplate";
     private const string ConditionalAttributeName = "Conditional";
+    private const string BitFieldAttributeName = "BitField";
 
     public void Initialize(GeneratorInitializationContext context)
         => context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
@@ -93,6 +94,14 @@ public class PacketSerializerGenerator : ISourceGenerator
             }
 
             var writerMethod = MapTypeToReaderWriterMethod(parameterType);
+
+            var isBitField = false;
+            if (parameter.AttributeLists.Any(l => l.Attributes.Any(a => a.Name.ToString() == BitFieldAttributeName)))
+            {
+                writerMethod = "Byte";
+                isBitField = true;
+            }
+
             if (isArray)
             {
                 builder.AppendLine($"writer.WriteVarInt(subject.{parameterName}.Length);");
@@ -102,7 +111,7 @@ public class PacketSerializerGenerator : ISourceGenerator
                 if (writerMethod is null)
                     builder.AppendLine($"new {parameterType}Serializer().SerializeModel(subject.{parameterName}[i], writer);");
                 else
-                    builder.AppendLine($"writer.Write{writerMethod}(subject.{parameterName}[i]);");
+                    builder.AppendLine($"writer.Write{writerMethod}({(isBitField ? "(byte)" : "")}subject.{parameterName}[i]);");
 
                 builder.AppendLine("}");
 
@@ -122,7 +131,7 @@ public class PacketSerializerGenerator : ISourceGenerator
                 continue;
             }
 
-            builder.AppendLine($"writer.Write{writerMethod}(subject.{parameterName});");
+            builder.AppendLine($"writer.Write{writerMethod}({(isBitField ? "(byte)" : "")}subject.{parameterName});");
 
             if (conditional)
                 builder.AppendLine("}");
@@ -162,6 +171,14 @@ public class PacketSerializerGenerator : ISourceGenerator
                 conditional = true;
 
             var readerMethod = MapTypeToReaderWriterMethod(parameterType);
+
+            var isBitField = false;
+            if (parameter.AttributeLists.Any(l => l.Attributes.Any(a => a.Name.ToString() == BitFieldAttributeName)))
+            {
+                readerMethod = "Byte";
+                isBitField = true;
+            }
+
             if (isArray)
             {
                 if (conditional)
@@ -182,7 +199,7 @@ public class PacketSerializerGenerator : ISourceGenerator
                 if (readerMethod is null)
                     builder.AppendLine($"{parameterName}[i] = new {parameterType}Serializer().DeserializeModel(reader);");
                 else
-                    builder.AppendLine($"{parameterName}[i] = reader.Read{readerMethod}();");
+                    builder.AppendLine($"{parameterName}[i] = {(isBitField ? $"({parameterType})" : "")}reader.Read{readerMethod}();");
 
                 builder.AppendLine("}");
 
@@ -211,7 +228,7 @@ public class PacketSerializerGenerator : ISourceGenerator
                 continue;
             }
 
-            builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = reader.Read{readerMethod}();");
+            builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = {(isBitField ? $"({parameterType})" : "")}reader.Read{readerMethod}();");
 
             if (conditional)
                 builder.AppendLine("}");

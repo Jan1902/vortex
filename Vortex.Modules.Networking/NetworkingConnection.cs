@@ -12,7 +12,7 @@ internal class NetworkingConnection(
     ILogger<NetworkingConnection> logger,
     NetworkingController packetManager,
     IEventBus eventBus,
-    PacketSerializer packetSerializer) : INetworkingConnection
+    PacketSerializer packetSerializer)
 {
     private readonly RecyclableMemoryStreamManager _streamManager = new();
 

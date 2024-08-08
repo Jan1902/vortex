@@ -28,3 +28,6 @@ public record FinishConfiguration : PacketBase;
 
 [AutoSerializedPacket(0x03, ProtocolState.Configuration, PacketDirection.ServerBound)]
 public record AcknowledgeFinishConfiguration : PacketBase;
+
+[AutoSerializedPacket(0x0D, ProtocolState.Configuration)]
+public record UpdateTags : PacketBase;

@@ -114,5 +114,8 @@ public enum ConditionalType
     PreviousBoolean
 }
 
+[AttributeUsage(AttributeTargets.Parameter)]
+public class BitFieldAttribute() : Attribute;
+
 [AttributeUsage(AttributeTargets.Class)]
 public class PacketModelAttribute : Attribute;

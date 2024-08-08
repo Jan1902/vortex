@@ -8,9 +8,9 @@ namespace Vortex.Framework;
 
 internal class VortexClientFacade(
     IComponentContext context,
-    INetworkingConnection connection,
-    ILogger<VortexClientFacade> logger,
-    IChatManager chat) : IVortexClient
+    INetworkingManager connection,
+    IChatManager chat,
+    ILogger<VortexClientFacade> logger) : IVortexClient
 {
     public async Task StartAsync()
     {
@@ -29,11 +29,9 @@ internal class VortexClientFacade(
         logger.LogInformation("Initialization complete.");
         logger.LogInformation("Connecting to server...");
 
-        await connection.Connect();
-
-        // TODO: Wait until we entered play mode
+        await connection.ConnectAndWaitForPlay();
     }
 
     public Task SendChatMessage(string message)
-            => chat.SendMessage(message);
+        => chat.SendMessage(message);
 }

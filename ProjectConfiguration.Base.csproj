@@ -1,0 +1,14 @@
+<Project>
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vortex.Framework.Abstraction\Vortex.Framework.Abstraction.csproj" />
+        <ProjectReference Include="..\Vortex.Shared\Vortex.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,18 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+  <Import Project="../ProjectConfiguration.Base.csproj" />
 
   <ItemGroup>
     <PackageReference Include="Autofac" Version="8.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Vortex.Framework.Abstraction\Vortex.Framework.Abstraction.csproj" />
-    <ProjectReference Include="..\Vortex.Shared\Vortex.Shared.csproj" />
   </ItemGroup>
 
 </Project>

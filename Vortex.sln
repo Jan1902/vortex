@@ -16,6 +16,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6D84526F-8FB9-477E-A940-177702768D84}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		ProjectConfiguration.Base.csproj = ProjectConfiguration.Base.csproj
+		ProjectConfiguration.Module.csproj = ProjectConfiguration.Module.csproj
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.Chat", "Vortex.Modules.Chat\Vortex.Modules.Chat.csproj", "{3C5C81B5-6758-4741-9745-A7E1FBDDDA66}"
@@ -34,7 +36,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Chat", "Chat", "{99B8E0F9-A
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Networking", "Networking", "{442F3AB4-9294-474D-BCE4-5E6A43603271}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vortex.Modules.Chat.Abstraction", "Vortex.Modules.Chat.Abstraction\Vortex.Modules.Chat.Abstraction.csproj", "{F33042B2-E5B8-4EAD-A3A9-665C66BB1296}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.Chat.Abstraction", "Vortex.Modules.Chat.Abstraction\Vortex.Modules.Chat.Abstraction.csproj", "{F33042B2-E5B8-4EAD-A3A9-665C66BB1296}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Player", "Player", "{1491C399-6F2C-4413-A62D-E7D3B851C6E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vortex.Modules.Player", "Vortex.Modules.Player\Vortex.Modules.Player.csproj", "{D296B44A-E672-48A8-A146-FAEA0017E0A3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,6 +84,10 @@ Global
 		{F33042B2-E5B8-4EAD-A3A9-665C66BB1296}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F33042B2-E5B8-4EAD-A3A9-665C66BB1296}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F33042B2-E5B8-4EAD-A3A9-665C66BB1296}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D296B44A-E672-48A8-A146-FAEA0017E0A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D296B44A-E672-48A8-A146-FAEA0017E0A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D296B44A-E672-48A8-A146-FAEA0017E0A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D296B44A-E672-48A8-A146-FAEA0017E0A3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -94,6 +104,8 @@ Global
 		{99B8E0F9-A7EA-447E-85DD-A44C27B594E5} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
 		{442F3AB4-9294-474D-BCE4-5E6A43603271} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
 		{F33042B2-E5B8-4EAD-A3A9-665C66BB1296} = {99B8E0F9-A7EA-447E-85DD-A44C27B594E5}
+		{1491C399-6F2C-4413-A62D-E7D3B851C6E5} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
+		{D296B44A-E672-48A8-A146-FAEA0017E0A3} = {1491C399-6F2C-4413-A62D-E7D3B851C6E5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6A5C458F-FABD-4AEE-BA45-0A1378350F77}

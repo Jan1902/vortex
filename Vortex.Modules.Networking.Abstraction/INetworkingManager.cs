@@ -1,7 +1,9 @@
 ﻿namespace Vortex.Modules.Networking.Abstraction;
 
-public interface INetworkingConnection
+public interface INetworkingManager
 {
     Task Connect();
+    Task ConnectAndWaitForPlay();
+
     Task SendPacket(PacketBase packet);
 }

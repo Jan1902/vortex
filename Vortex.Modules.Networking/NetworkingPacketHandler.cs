@@ -3,17 +3,19 @@ using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.Networking;
 
-internal class NetworkingPacketHandler(ILogger<NetworkingPacketHandler> logger, INetworkingConnection connection, NetworkingController controller)
+internal class NetworkingPacketHandler(ILogger<NetworkingPacketHandler> logger, NetworkingConnection connection, NetworkingController controller)
     : IPacketHandler<LoginSuccessPacket>,
     IPacketHandler<ClientBoundKnownPacks>,
     IPacketHandler<RegistryData>,
-    IPacketHandler<FinishConfiguration>
+    IPacketHandler<FinishConfiguration>,
+    IPacketHandler<ClientBoundKeepAlive>
 {
     public async Task HandleAsync(LoginSuccessPacket packet)
     {
         logger.LogInformation("Received LoginSuccess packet for {Username} with UUID {Uuid}", packet.Username, packet.Uuid);
         await connection.SendPacket(new LoginAcknowledgedPacket());
-        controller.SetState(ProtocolState.Configuration);
+
+        await controller.SetState(ProtocolState.Configuration);
     }
 
     public async Task HandleAsync(ClientBoundKnownPacks packet)
@@ -34,6 +36,14 @@ internal class NetworkingPacketHandler(ILogger<NetworkingPacketHandler> logger, 
         logger.LogInformation("Received FinishConfiguration packet");
 
         await connection.SendPacket(new AcknowledgeFinishConfiguration());
-        controller.SetState(ProtocolState.Play);
+
+        await controller.SetState(ProtocolState.Play);
+    }
+
+    public async Task HandleAsync(ClientBoundKeepAlive packet)
+    {
+        logger.LogInformation("Received KeepAlive packet with KeepAliveId {id}", packet.KeepAliveId);
+
+        await connection.SendPacket(new ServerBoundKeepAlive(packet.KeepAliveId));
     }
 }

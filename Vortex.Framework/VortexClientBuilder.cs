@@ -4,6 +4,7 @@ using Serilog.Extensions.Autofac.DependencyInjection;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Chat;
 using Vortex.Modules.Networking;
+using Vortex.Modules.Player;
 
 namespace Vortex.Framework;
 
@@ -16,7 +17,8 @@ public class VortexClientBuilder
     private readonly List<Type> _loadedModules =
         [
             typeof(NetworkingModule),
-            typeof(ChatModule)
+            typeof(ChatModule),
+            typeof(PlayerModule)
         ];
 
     /// <summary>

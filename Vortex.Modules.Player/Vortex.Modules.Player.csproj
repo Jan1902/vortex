@@ -2,9 +2,5 @@
 
     <Import Project="../ProjectConfiguration.Base.csproj" />
     <Import Project="../ProjectConfiguration.Module.csproj" />
-    
-    <ItemGroup>
-      <ProjectReference Include="..\Vortex.Modules.Chat.Abstraction\Vortex.Modules.Chat.Abstraction.csproj" />
-    </ItemGroup>
 
 </Project>
