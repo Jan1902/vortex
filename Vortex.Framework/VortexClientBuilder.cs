@@ -5,6 +5,7 @@ using Vortex.Framework.Abstraction;
 using Vortex.Modules.Chat;
 using Vortex.Modules.Networking;
 using Vortex.Modules.Player;
+using Vortex.Modules.World;
 
 namespace Vortex.Framework;
 
@@ -18,7 +19,8 @@ public class VortexClientBuilder
         [
             typeof(NetworkingModule),
             typeof(ChatModule),
-            typeof(PlayerModule)
+            typeof(PlayerModule),
+            typeof(WorldModule)
         ];
 
     /// <summary>

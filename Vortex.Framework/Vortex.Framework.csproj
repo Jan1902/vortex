@@ -18,6 +18,7 @@
     <ProjectReference Include="..\Vortex.Modules.Chat\Vortex.Modules.Chat.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Networking\Vortex.Modules.Networking.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Player\Vortex.Modules.Player.csproj" />
+    <ProjectReference Include="..\Vortex.Modules.World\Vortex.Modules.World.csproj" />
   </ItemGroup>
 
 </Project>

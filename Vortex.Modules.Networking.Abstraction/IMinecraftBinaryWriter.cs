@@ -25,4 +25,5 @@ public interface IMinecraftBinaryWriter
     void WriteUShort(ushort value);
     void WriteUUID(Guid uuid);
     void WriteVarInt(int value);
+    void WriteBitSet(bool[] value);
 }

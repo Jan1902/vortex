@@ -6,7 +6,7 @@ var client = new VortexClientBuilder()
 
 await client.StartAsync();
 
-//await client.SendChatMessage("Hello world!");
+await client.SendChatMessage("Hello world!");
 
 while (true)
 {

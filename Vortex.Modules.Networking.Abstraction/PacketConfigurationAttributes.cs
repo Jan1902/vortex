@@ -117,5 +117,22 @@ public enum ConditionalType
 [AttributeUsage(AttributeTargets.Parameter)]
 public class BitFieldAttribute() : Attribute;
 
+[AttributeUsage(AttributeTargets.Parameter)]
+public class BitSetAttribute(int length) : Attribute
+{
+    public int Length { get; } = length;
+}
+
+[AttributeUsage(AttributeTargets.Parameter)]
+public class OverwriteTypeAttribute(OverwriteType type) : Attribute
+{
+    public OverwriteType Type { get; } = type;
+}
+
+public enum OverwriteType
+{
+    Int
+}
+
 [AttributeUsage(AttributeTargets.Class)]
 public class PacketModelAttribute : Attribute;

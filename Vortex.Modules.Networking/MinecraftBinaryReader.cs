@@ -79,4 +79,7 @@ public class MinecraftBinaryReader(Stream stream) : IDisposable, IMinecraftBinar
 
     public void Dispose()
         => _stream.Dispose();
+
+    public bool[] ReadBitSet(int length)
+        => _stream.ReadBitSet(length);
 }

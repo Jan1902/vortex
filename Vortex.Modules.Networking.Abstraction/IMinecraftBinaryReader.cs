@@ -23,4 +23,5 @@ public interface IMinecraftBinaryReader
     ushort ReadUShort();
     Guid ReadUUID();
     int ReadVarInt();
+    bool[] ReadBitSet(int length);
 }

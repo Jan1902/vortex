@@ -8,5 +8,6 @@ public class ChatModule : IModule
     public void Load(ContainerBuilder builder)
     {
         builder.RegisterType<ChatManager>().AsImplementedInterfaces();
+        builder.RegisterType<ChatPacketHandler>().AsImplementedInterfaces();
     }
 }

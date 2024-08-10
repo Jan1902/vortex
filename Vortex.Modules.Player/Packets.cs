@@ -14,3 +14,27 @@ public enum PositionFlags
     Y_ROT = 0x08,
     X_ROT = 0x10
 }
+
+[AutoSerializedPacket(0x00, packetDirection: PacketDirection.ServerBound)]
+public record ConfirmTeleportation(int TeleportId) : PacketBase;
+
+[AutoSerializedPacket(0x38)]
+public record PlayerAbilities : PacketBase;
+
+[AutoSerializedPacket(0x3e)]
+public record PlayerInfoUpdate : PacketBase;
+
+[AutoSerializedPacket(0x56)]
+public record SetDefaultSpawnPosition : PacketBase;
+
+[AutoSerializedPacket(0x71)]
+public record SetTickingRate : PacketBase;
+
+[AutoSerializedPacket(0x72)]
+public record StepTick : PacketBase;
+
+[AutoSerializedPacket(0x5d)]
+public record SetHealth(float Health, int Food, float FoodSaturation) : PacketBase;
+
+[AutoSerializedPacket(0x5c)]
+public record SetExperience(float ExperienceBar, int Level, int TotalExperience) : PacketBase;

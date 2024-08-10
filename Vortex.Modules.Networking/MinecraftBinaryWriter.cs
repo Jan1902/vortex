@@ -87,4 +87,7 @@ public class MinecraftBinaryWriter(Stream stream) : IDisposable, IMinecraftBinar
 
     public void Dispose()
         => _stream.Dispose();
+
+    public void WriteBitSet(bool[] value)
+        => _stream.WriteBitSet(value);
 }
