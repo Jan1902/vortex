@@ -103,36 +103,66 @@ public class PacketAttribute(int packetId, ProtocolState state = ProtocolState.P
     public PacketDirection PacketDirection { get; } = packetDirection;
 }
 
+/// <summary>
+/// Specifies the conditional attribute for a parameter in a packet.
+/// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public class ConditionalAttribute(ConditionalType type = ConditionalType.PreviousBoolean) : Attribute
 {
+    /// <summary>
+    /// Gets the type of conditional attribute.
+    /// </summary>
     public ConditionalType Type { get; } = type;
 }
 
+/// <summary>
+/// Represents the type of conditional attribute.
+/// </summary>
 public enum ConditionalType
 {
     PreviousBoolean
 }
 
+/// <summary>
+/// Specifies the bit field attribute for a parameter in a packet.
+/// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public class BitFieldAttribute() : Attribute;
 
+/// <summary>
+/// Specifies the bit set attribute for a parameter in a packet.
+/// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public class BitSetAttribute(int length) : Attribute
 {
+    /// <summary>
+    /// Gets the length of the bit set.
+    /// </summary>
     public int Length { get; } = length;
 }
 
+/// <summary>
+/// Specifies the overwrite type attribute for a parameter in a packet.
+/// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public class OverwriteTypeAttribute(OverwriteType type) : Attribute
 {
+    /// <summary>
+    /// Gets the type of overwrite.
+    /// </summary>
     public OverwriteType Type { get; } = type;
 }
 
+/// <summary>
+/// Represents the type of overwrite.
+/// </summary>
 public enum OverwriteType
 {
     Int
 }
 
+/// <summary>
+/// Specifies that a class is a model used inside packets.
+/// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public class PacketModelAttribute : Attribute;
