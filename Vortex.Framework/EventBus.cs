@@ -19,11 +19,13 @@ internal class EventBus(IComponentContext context) : IEventBus, IInitialize
 
         foreach (var handlerType in handlerTypes)
         {
-            if (!_handlers.ContainsKey(handlerType))
-                _handlers[handlerType.GetGenericArguments()[0]] = [];
+            var eventType = handlerType.GetGenericArguments()[0];
+
+            if (!_handlers.ContainsKey(eventType))
+                _handlers[eventType] = [];
 
             var handlers = (IEnumerable<object>)context.Resolve(typeof(IEnumerable<>).MakeGenericType(handlerType));
-            _handlers[handlerType.GetGenericArguments()[0]].AddRange(handlers);
+            _handlers[eventType].AddRange(handlers);
         }
     }
 
@@ -34,5 +36,23 @@ internal class EventBus(IComponentContext context) : IEventBus, IInitialize
 
         foreach (var handler in _handlers[typeof(TEvent)])
             await ((Task?) typeof(IEventHandler<TEvent>).GetMethod(nameof(IEventHandler<TEvent>.HandleAsync))?.Invoke(handler, [@event]) ?? Task.CompletedTask);
+    }
+
+    internal void RegisterProxyHandler<TEvent, TEventArgs>(AsyncEventHandler<TEventArgs>? handler, Func<TEvent, TEventArgs> mappingFunction)
+    {
+        if (!_handlers.ContainsKey(typeof(TEvent)))
+            _handlers[typeof(TEvent)] = [];
+
+        _handlers[typeof(TEvent)].Add(new ProxyHandler<TEvent, TEventArgs>((e) => handler?.Invoke(e) ?? Task.CompletedTask, mappingFunction));
+    }
+}
+
+internal class ProxyHandler<TEvent, TEventArgs>(Func<TEventArgs, Task> invokeFunction, Func<TEvent, TEventArgs> mappingFunction) : IEventHandler<TEvent>
+{
+    public Task HandleAsync(TEvent e)
+    {
+        var eventArgs = mappingFunction(e);
+
+        return invokeFunction(eventArgs);
     }
 }

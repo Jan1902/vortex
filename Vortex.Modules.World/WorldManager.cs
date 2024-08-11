@@ -15,6 +15,6 @@ internal class WorldManager : IWorldManager
 
     public BlockState? GetBlock(Vector3i position)
         => GetChunk(new Vector2i(position.X >> 4, position.Z >> 4))?
-            .Sections[position.Y >> 4]
+            .Sections[(position.Y >> 4) + 4]
             .States[position.X & 0xF, position.Y & 0xF, position.Z & 0xF];
 }

@@ -64,7 +64,7 @@ public class VortexClientBuilder
 
         containerBuilder.RegisterType<VortexClientFacade>().AsImplementedInterfaces();
         containerBuilder.RegisterInstance(_configuration);
-        containerBuilder.RegisterType<EventBus>().SingleInstance().AsImplementedInterfaces();
+        containerBuilder.RegisterType<EventBus>().SingleInstance().AsSelf().AsImplementedInterfaces();
 
         foreach (var module in _loadedModules)
         {

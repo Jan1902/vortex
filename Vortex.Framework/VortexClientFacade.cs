@@ -13,8 +13,11 @@ internal class VortexClientFacade(
     INetworkingManager connection,
     IChatManager chat,
     IWorldManager world,
-    ILogger<VortexClientFacade> logger) : IVortexClient
+    ILogger<VortexClientFacade> logger,
+    EventBus eventBus) : IVortexClient
 {
+    public event AsyncEventHandler<ChatMessageReceivedEventArgs>? ChatMessageReceived;
+
     public async Task StartAsync()
     {
         logger.LogInformation("Starting Vortex client...");
@@ -29,10 +32,17 @@ internal class VortexClientFacade(
         var toInitAsync = context.Resolve<IEnumerable<IInitializeAsync>>();
         await Task.WhenAll(toInitAsync.Select(s => s.InitializeAsync()));
 
+        SetupEventPassThroughs();
+
         logger.LogInformation("Initialization complete.");
         logger.LogInformation("Connecting to server...");
 
         await connection.ConnectAndWaitForPlay();
+    }
+
+    private void SetupEventPassThroughs()
+    {
+        eventBus.RegisterProxyHandler<ChatMessageReceivedEvent, ChatMessageReceivedEventArgs>(ChatMessageReceived, (e) => new(e.Message));
     }
 
     public Task SendChatMessage(string message)
@@ -40,4 +50,7 @@ internal class VortexClientFacade(
 
     public BlockState? GetBlock(Vector3i position)
         => world.GetBlock(position);
+
+    public Chunk? GetChunk(Vector2i position)
+        => world.GetChunk(position);
 }

@@ -49,7 +49,7 @@ internal class NetworkingController(
         var registration = _packetRegistrations.FirstOrDefault(p => p.PacketId == packetId && p.State == _state);
         if (registration is null)
         {
-            logger.LogInformation("Received unknown packet with id 0x{packetId:X2}", packetId);
+            //logger.LogInformation("Received unknown packet with id 0x{packetId:X2}", packetId);
             return;
         }
 

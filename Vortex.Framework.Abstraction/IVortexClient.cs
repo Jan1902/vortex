@@ -26,4 +26,16 @@ public interface IVortexClient
     /// <param name="position">The position of the block.</param>
     /// <returns>The block state at the specified position.</returns>
     BlockState? GetBlock(Vector3i position);
+
+    /// <summary>
+    /// Gets the chunk at the specified position.
+    /// </summary>
+    /// <param name="position">The position of the chunk.</param>
+    /// <returns>The chunk at the specified position.</returns>
+    Chunk? GetChunk(Vector2i position);
+
+    /// <summary>
+    /// Event that is raised when a chat message is received.
+    /// </summary>
+    event AsyncEventHandler<ChatMessageReceivedEventArgs>? ChatMessageReceived;
 }
