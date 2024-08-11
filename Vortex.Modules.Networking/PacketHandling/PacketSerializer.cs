@@ -1,8 +1,10 @@
 ﻿using Autofac;
 using System.Reflection;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.Networking.Data;
+using Vortex.Modules.Networking.Packets;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.PacketHandling;
 
 public class PacketSerializer
 {

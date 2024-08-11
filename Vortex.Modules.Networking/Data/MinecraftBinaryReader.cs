@@ -1,9 +1,10 @@
 ﻿using BitConverter;
 using System.Text;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.Networking.CustomTypes;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.Data;
 
 public class MinecraftBinaryReader(Stream stream) : IMinecraftBinaryReader
 {

@@ -1,7 +1,8 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.World.ChunkData.Palettes.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.World;
+namespace Vortex.Modules.World.ChunkData.Palettes;
 
 internal class DirectPalette(IGlobalPaletteProvider globalPaletteProvider) : IPalette
 {

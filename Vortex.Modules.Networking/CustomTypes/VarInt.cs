@@ -1,4 +1,4 @@
-﻿namespace Vortex.Modules.Networking;
+﻿namespace Vortex.Modules.Networking.CustomTypes;
 
 internal static class VarInt
 {

@@ -1,5 +1,7 @@
 ﻿using Autofac;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.Networking.Data;
+using Vortex.Modules.Networking.PacketHandling;
 
 namespace Vortex.Modules.Networking;
 

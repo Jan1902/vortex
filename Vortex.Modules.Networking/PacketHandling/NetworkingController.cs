@@ -3,8 +3,9 @@ using Microsoft.Extensions.Logging;
 using System.Reflection;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.Networking.Data;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.PacketHandling;
 
 internal class NetworkingController(
     IComponentContext componentContext,
@@ -62,7 +63,7 @@ internal class NetworkingController(
         var eventType = typeof(PacketReceivedEvent<>).MakeGenericType(registration.PacketType);
         var packetReceivedEvent = Activator.CreateInstance(eventType, [packet]);
 
-        await ((Task?) typeof(IEventBus).GetMethod(nameof(IEventBus.PublishAsync))?.MakeGenericMethod(eventType).Invoke(eventBus, [packetReceivedEvent]) ?? Task.CompletedTask);
+        await ((Task?)typeof(IEventBus).GetMethod(nameof(IEventBus.PublishAsync))?.MakeGenericMethod(eventType).Invoke(eventBus, [packetReceivedEvent]) ?? Task.CompletedTask);
     }
 }
 

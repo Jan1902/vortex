@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.World.ChunkData;
 
 namespace Vortex.Modules.World;
 

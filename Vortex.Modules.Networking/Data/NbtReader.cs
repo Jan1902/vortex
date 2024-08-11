@@ -1,7 +1,7 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.Data;
 
 internal static class NbtReader
 {

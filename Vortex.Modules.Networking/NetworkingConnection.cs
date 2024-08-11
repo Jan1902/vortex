@@ -3,6 +3,8 @@ using Microsoft.IO;
 using System.Net.Sockets;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.Networking.CustomTypes;
+using Vortex.Modules.Networking.PacketHandling;
 
 namespace Vortex.Modules.Networking;
 

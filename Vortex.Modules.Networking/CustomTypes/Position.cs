@@ -1,6 +1,7 @@
-﻿using Vortex.Shared;
+﻿using Vortex.Modules.Networking.Data;
+using Vortex.Shared;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.CustomTypes;
 
 internal static class Position
 {
@@ -20,7 +21,7 @@ internal static class Position
     {
         var writer = new MinecraftBinaryWriter(stream);
 
-        var result = ((value.X & 0x3FFFFFF) << 38) | ((value.Z & 0x3FFFFFF) << 12) | (value.Y & 0xFFF);
+        var result = (value.X & 0x3FFFFFF) << 38 | (value.Z & 0x3FFFFFF) << 12 | value.Y & 0xFFF;
         writer.WriteLong(result);
     }
 

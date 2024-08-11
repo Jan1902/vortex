@@ -1,4 +1,4 @@
-﻿namespace Vortex.Modules.World;
+﻿namespace Vortex.Modules.World.ChunkData;
 
 internal class CompactedDataArray(ulong[] dataArray, int bitsPerEntry)
 {
@@ -10,9 +10,9 @@ internal class CompactedDataArray(ulong[] dataArray, int bitsPerEntry)
     public ulong Get(int index)
     {
         var longIndex = index / EntriesPerLong;
-        var individualOffset = (index % EntriesPerLong) * bitsPerEntry;
+        var individualOffset = index % EntriesPerLong * bitsPerEntry;
 
-        var value = (ulong)(dataArray[longIndex] >> individualOffset);
+        var value = dataArray[longIndex] >> individualOffset;
         value &= IndividualValueMask;
 
         return value;

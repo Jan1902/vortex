@@ -1,13 +1,13 @@
 using System.Collections;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.CustomTypes;
 
 internal static class BitSet
 {
     public static void WriteBitSetToStream(Stream stream, bool[] bitSet)
     {
         var bitArray = new BitArray(bitSet);
-        var bytes = new byte[(int) Math.Ceiling(bitSet.Length / 8d)];
+        var bytes = new byte[(int)Math.Ceiling(bitSet.Length / 8d)];
         bitArray.CopyTo(bytes, 0);
 
         stream.Write(bytes, 0, bytes.Length);
@@ -15,7 +15,7 @@ internal static class BitSet
 
     public static bool[] ReadBitSetFromStream(Stream stream, int length)
     {
-        var bytes = new byte[(int) Math.Ceiling(length / 8d)];
+        var bytes = new byte[(int)Math.Ceiling(length / 8d)];
         stream.Read(bytes, 0, bytes.Length);
 
         var bitArray = new BitArray(bytes);

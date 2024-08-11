@@ -1,5 +1,7 @@
 ﻿using Autofac;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.World.ChunkData;
+using Vortex.Modules.World.ChunkData.Palettes;
 
 namespace Vortex.Modules.World;
 

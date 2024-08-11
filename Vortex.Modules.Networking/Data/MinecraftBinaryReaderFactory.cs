@@ -1,6 +1,6 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.Data;
 
 internal class MinecraftBinaryReaderFactory : IMinecraftBinaryReaderFactory
 {

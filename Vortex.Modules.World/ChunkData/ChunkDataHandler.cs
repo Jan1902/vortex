@@ -1,7 +1,8 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.World.ChunkData.Palettes;
 using Vortex.Shared;
 
-namespace Vortex.Modules.World;
+namespace Vortex.Modules.World.ChunkData;
 
 internal class ChunkDataHandler(PaletteFactory paletteFactory, IMinecraftBinaryReaderFactory binaryReaderFactory)
 {
@@ -77,7 +78,7 @@ internal class ChunkDataHandler(PaletteFactory paletteFactory, IMinecraftBinaryR
             {
                 for (var x = 0; x < 16; x++)
                 {
-                    var blockNumber = (((y * 16) + z) * 16) + x;
+                    var blockNumber = (y * 16 + z) * 16 + x;
                     var state = palette.GetStateForId((int)compactedArray[blockNumber]);
 
                     states[x, y, z] = state;

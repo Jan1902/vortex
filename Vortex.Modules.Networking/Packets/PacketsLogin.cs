@@ -1,6 +1,6 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.Packets;
 
 [AutoSerializedPacket(0x00, ProtocolState.Handshake, PacketDirection.ServerBound)]
 public record HandshakePacket(int ProtocolVersion, string ServerAddress, ushort ServerPort, int NextState) : PacketBase;

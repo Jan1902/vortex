@@ -1,4 +1,6 @@
-﻿namespace Vortex.Modules.World;
+﻿using Vortex.Modules.World.ChunkData.Palettes.Abstraction;
+
+namespace Vortex.Modules.World.ChunkData.Palettes;
 
 internal class PaletteFactory(IGlobalPaletteProvider globalPaletteProvider)
 {

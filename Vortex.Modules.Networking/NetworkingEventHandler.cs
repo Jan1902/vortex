@@ -1,5 +1,7 @@
 ﻿using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.Networking.PacketHandling;
+using Vortex.Modules.Networking.Packets;
 
 namespace Vortex.Modules.Networking;
 

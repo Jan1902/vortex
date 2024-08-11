@@ -1,7 +1,8 @@
 ﻿using Newtonsoft.Json.Linq;
+using Vortex.Modules.World.ChunkData.Palettes.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.World;
+namespace Vortex.Modules.World.ChunkData.Palettes;
 
 internal class FileGlobalPaletteProvider : IGlobalPaletteProvider
 {

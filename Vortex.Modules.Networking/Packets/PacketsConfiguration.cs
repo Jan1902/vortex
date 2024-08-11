@@ -1,6 +1,6 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
 
-namespace Vortex.Modules.Networking;
+namespace Vortex.Modules.Networking.Packets;
 
 [AutoSerializedPacket(0x01, ProtocolState.Configuration)]
 public record PluginMessage(string Channel) : PacketBase;
