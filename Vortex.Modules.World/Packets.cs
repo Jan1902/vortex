@@ -1,4 +1,5 @@
 ﻿using Vortex.Modules.Networking.Abstraction;
+using Vortex.Shared;
 
 namespace Vortex.Modules.World;
 
@@ -6,7 +7,7 @@ namespace Vortex.Modules.World;
 public record ChunkBatchStart : PacketBase;
 
 [AutoSerializedPacket(0x27)]
-public record ChunkDataAndUpdateLight([OverwriteType(OverwriteType.Int)] int ChunkX, [OverwriteType(OverwriteType.Int)] int ChunkZ, string Heightmaps, byte[] Data/*, BlockEntity[] BlockEntities*/) : PacketBase;
+public record ChunkDataAndUpdateLight([OverwriteType(OverwriteType.Int)] int ChunkX, [OverwriteType(OverwriteType.Int)] int ChunkZ, NbtTag Heightmaps, byte[] Data/*, BlockEntity[] BlockEntities*/) : PacketBase;
 
 [PacketModel]
 public record BlockEntity(byte PackedXZ, short Y, int Type, string Data);

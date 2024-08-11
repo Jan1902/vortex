@@ -5,17 +5,12 @@ namespace Vortex.Modules.Networking.Abstraction;
 /// <summary>
 /// Represents a binary writer for writing Minecraft data types to a stream.
 /// </summary>
-public interface IMinecraftBinaryWriter
+public interface IMinecraftBinaryWriter : IDisposable
 {
     /// <summary>
     /// Gets the underlying stream.
     /// </summary>
     Stream UnderlyingStream { get; }
-
-    /// <summary>
-    /// Disposes the binary writer and releases any resources used.
-    /// </summary>
-    void Dispose();
 
     /// <summary>
     /// Resets the position of the underlying stream to the beginning.
@@ -129,4 +124,10 @@ public interface IMinecraftBinaryWriter
     /// </summary>
     /// <param name="value">The bit set to write.</param>
     void WriteBitSet(bool[] value);
+
+    /// <summary>
+    /// Writes an NBT tag to the underlying stream.
+    /// </summary>
+    /// <param name="tag">The NBT tag to be written</param>
+    void WriteNbtTag(NbtTag tag);
 }

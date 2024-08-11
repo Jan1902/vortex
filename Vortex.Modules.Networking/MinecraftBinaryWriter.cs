@@ -5,7 +5,7 @@ using Vortex.Shared;
 
 namespace Vortex.Modules.Networking;
 
-public class MinecraftBinaryWriter(Stream stream) : IDisposable, IMinecraftBinaryWriter
+public class MinecraftBinaryWriter(Stream stream) : IMinecraftBinaryWriter
 {
     private readonly Stream _stream = stream;
     private readonly EndianBitConverter _bitConverter = EndianBitConverter.BigEndian;
@@ -90,4 +90,7 @@ public class MinecraftBinaryWriter(Stream stream) : IDisposable, IMinecraftBinar
 
     public void WriteBitSet(bool[] value)
         => _stream.WriteBitSet(value);
+
+    public void WriteNbtTag(NbtTag tag)
+        => throw new NotImplementedException();
 }

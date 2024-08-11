@@ -5,7 +5,7 @@ using Vortex.Shared;
 
 namespace Vortex.Modules.Networking;
 
-public class MinecraftBinaryReader(Stream stream) : IDisposable, IMinecraftBinaryReader
+public class MinecraftBinaryReader(Stream stream) : IMinecraftBinaryReader
 {
     private readonly Stream _stream = stream;
     private readonly EndianBitConverter _bitConverter = EndianBitConverter.BigEndian;
@@ -82,4 +82,7 @@ public class MinecraftBinaryReader(Stream stream) : IDisposable, IMinecraftBinar
 
     public bool[] ReadBitSet(int length)
         => _stream.ReadBitSet(length);
+
+    public NbtTag ReadNbtTag()
+        => NbtReader.ParseNBT(this);
 }

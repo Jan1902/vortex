@@ -229,7 +229,7 @@ public class PacketSerializerGenerator : ISourceGenerator
             var overwriteTypeAttribute = parameter.AttributeLists.SelectMany(l => l.Attributes).FirstOrDefault(a => a.Name.ToString() == OverwriteTypeAttributeName);
             if (overwriteTypeAttribute is not null)
             {
-                var memberAccess = (MemberAccessExpressionSyntax?) overwriteTypeAttribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression;
+                var memberAccess = (MemberAccessExpressionSyntax?)overwriteTypeAttribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression;
 
                 if (memberAccess is not null)
                     readerMethod = memberAccess.Name.Identifier.ValueText;
@@ -290,7 +290,6 @@ public class PacketSerializerGenerator : ISourceGenerator
                 builder.AppendLine($"for (int i = 0; i < {parameterName}Length; i++)");
                 builder.AppendLine("{");
 
-                // Custom model
                 if (readerMethod is null)
                     builder.AppendLine($"{parameterName}[i] = new {parameterType}Serializer().DeserializeModel(reader);");
                 else
@@ -362,6 +361,7 @@ public class PacketSerializerGenerator : ISourceGenerator
             "bool" => "Bool",
             "string" => "StringWithVarIntPrefix",
             "Guid" => "UUID",
+            "NbtTag" => "NbtTag",
             _ => null
         };
     }

@@ -12,6 +12,8 @@ public class NetworkingModule : IModule
         builder.RegisterType<NetworkingConnection>().SingleInstance();
         builder.RegisterType<PacketSerializer>().SingleInstance();
 
+        builder.RegisterType<MinecraftBinaryReaderFactory>().AsImplementedInterfaces();
+
         builder.RegisterType<NetworkingPacketHandler>().AsImplementedInterfaces();
         builder.RegisterType<NetworkingEventHandler>().AsImplementedInterfaces();
     }

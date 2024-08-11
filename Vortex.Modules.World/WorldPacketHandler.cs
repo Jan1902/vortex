@@ -3,7 +3,7 @@ using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.World;
 
-internal class WorldPacketHandler(INetworkingManager networking, ILogger<WorldPacketHandler> logger)
+internal class WorldPacketHandler(INetworkingManager networking, ILogger<WorldPacketHandler> logger, ChunkDataHandler chunkDataHandler)
     : IPacketHandler<ChunkBatchStart>,
     IPacketHandler<ChunkDataAndUpdateLight>,
     IPacketHandler<ChunkBatchFinished>
@@ -15,6 +15,8 @@ internal class WorldPacketHandler(INetworkingManager networking, ILogger<WorldPa
 
     public Task HandleAsync(ChunkDataAndUpdateLight packet)
     {
+        var chunk = chunkDataHandler.HandleChunkData(packet.Data);
+
         logger.LogInformation("Received ChunkData packet for chunk X: {X} Y: {Z}", packet.ChunkX, packet.ChunkZ);
 
         return Task.CompletedTask;

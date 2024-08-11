@@ -2,5 +2,14 @@
 
     <Import Project="../ProjectConfiguration.Base.csproj" />
     <Import Project="../ProjectConfiguration.Module.csproj" />
+    <ItemGroup>
+      <None Remove="Resources\blocks.json" />
+    </ItemGroup>
+    <ItemGroup>
+      <EmbeddedResource Include="Resources\blocks.json" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    </ItemGroup>
 
 </Project>

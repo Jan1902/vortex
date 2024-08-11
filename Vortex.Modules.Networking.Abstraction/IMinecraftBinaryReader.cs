@@ -5,13 +5,8 @@ namespace Vortex.Modules.Networking.Abstraction;
 /// <summary>
 /// Represents a binary reader for reading Minecraft data.
 /// </summary>
-public interface IMinecraftBinaryReader
+public interface IMinecraftBinaryReader : IDisposable
 {
-    /// <summary>
-    /// Releases all resources used by the binary reader.
-    /// </summary>
-    void Dispose();
-
     /// <summary>
     /// Reads a boolean value from the binary stream.
     /// </summary>
@@ -128,4 +123,10 @@ public interface IMinecraftBinaryReader
     /// <param name="length">The length of the bit set to read.</param>
     /// <returns>An array of booleans representing the bit set read from the stream.</returns>
     bool[] ReadBitSet(int length);
+
+    /// <summary>
+    /// Reads a NBT tag from the binary stream.
+    /// </summary>
+    /// <returns>The read NBT tag</returns>
+    NbtTag ReadNbtTag();
 }
