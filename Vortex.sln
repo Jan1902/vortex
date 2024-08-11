@@ -42,7 +42,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Player", "Player", "{1491C3
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.Player", "Vortex.Modules.Player\Vortex.Modules.Player.csproj", "{D296B44A-E672-48A8-A146-FAEA0017E0A3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vortex.Modules.World", "Vortex.Modules.World\Vortex.Modules.World.csproj", "{F9F8BA61-0CCC-4FCB-8ED9-958023839EEF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vortex.Modules.World", "Vortex.Modules.World\Vortex.Modules.World.csproj", "{F9F8BA61-0CCC-4FCB-8ED9-958023839EEF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "World", "World", "{E7275FE7-4684-4059-A665-9E54BFA9707F}"
 EndProject
@@ -50,6 +50,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Repository Items", "Reposit
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vortex.Modules.World.Abstraction", "Vortex.Modules.World.Abstraction\Vortex.Modules.World.Abstraction.csproj", "{DCAEB969-583A-4040-B29C-A5F954994605}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -101,6 +103,10 @@ Global
 		{F9F8BA61-0CCC-4FCB-8ED9-958023839EEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9F8BA61-0CCC-4FCB-8ED9-958023839EEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9F8BA61-0CCC-4FCB-8ED9-958023839EEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCAEB969-583A-4040-B29C-A5F954994605}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCAEB969-583A-4040-B29C-A5F954994605}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCAEB969-583A-4040-B29C-A5F954994605}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCAEB969-583A-4040-B29C-A5F954994605}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -121,6 +127,7 @@ Global
 		{D296B44A-E672-48A8-A146-FAEA0017E0A3} = {1491C399-6F2C-4413-A62D-E7D3B851C6E5}
 		{F9F8BA61-0CCC-4FCB-8ED9-958023839EEF} = {E7275FE7-4684-4059-A665-9E54BFA9707F}
 		{E7275FE7-4684-4059-A665-9E54BFA9707F} = {62BE5ADE-B9BD-44C4-9448-0E0335484D9D}
+		{DCAEB969-583A-4040-B29C-A5F954994605} = {E7275FE7-4684-4059-A665-9E54BFA9707F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6A5C458F-FABD-4AEE-BA45-0A1378350F77}

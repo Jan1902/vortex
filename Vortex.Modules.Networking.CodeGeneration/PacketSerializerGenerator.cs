@@ -33,6 +33,7 @@ public class PacketSerializerGenerator : ISourceGenerator
     private const string BitFieldAttributeName = "BitField";
     private const string BitSetAttributeName = "BitSet";
     private const string OverwriteTypeAttributeName = "OverwriteType";
+    private const string LengthAttributeName = "Length";
 
     public void Initialize(GeneratorInitializationContext context)
         => context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
@@ -86,6 +87,17 @@ public class PacketSerializerGenerator : ISourceGenerator
                 parameterType = parameterType.Substring(0, parameterType.Length - 2);
             }
 
+            // Fixed length for strings or arrays
+            var lengthAttribute = parameter.AttributeLists.SelectMany(l => l.Attributes).FirstOrDefault(a => a.Name.ToString() == LengthAttributeName);
+            int? fixedLength = null;
+            if (lengthAttribute is not null)
+            {
+                var lengthString = lengthAttribute.ArgumentList?.Arguments.FirstOrDefault()?.ToString();
+
+                if (lengthString is not null)
+                    fixedLength = int.Parse(lengthString);
+            }
+
             // Conditional values with previous bool
             var conditional = false;
             if (parameter.AttributeLists.Any(l => l.Attributes.Any(a => a.Name.ToString() == ConditionalAttributeName)))
@@ -134,14 +146,16 @@ public class PacketSerializerGenerator : ISourceGenerator
                 parameterType = "byte[]";
 
                 // Length prefix
-                builder.AppendLine($"writer.WriteVarInt(subject.{parameterName}.Length);");
+                if (fixedLength is null)
+                    builder.AppendLine($"writer.WriteVarInt(subject.{parameterName}.Length);");
             }
 
             // Array
             if (isArray)
             {
                 // Length prefix
-                builder.AppendLine($"writer.WriteVarInt(subject.{parameterName}.Length);");
+                if (fixedLength is null)
+                    builder.AppendLine($"writer.WriteVarInt(subject.{parameterName}.Length);");
 
                 // For loop
                 builder.AppendLine($"for (int i = 0; i < subject.{parameterName}.Length; i++)");
@@ -216,6 +230,17 @@ public class PacketSerializerGenerator : ISourceGenerator
                 parameterType = parameterType.Substring(0, parameterType.Length - 2);
             }
 
+            // Fixed length for strings or arrays
+            var lengthAttribute = parameter.AttributeLists.SelectMany(l => l.Attributes).FirstOrDefault(a => a.Name.ToString() == LengthAttributeName);
+            int? fixedLength = null;
+            if (lengthAttribute is not null)
+            {
+                var lengthString = lengthAttribute.ArgumentList?.Arguments.FirstOrDefault()?.ToString();
+
+                if (lengthString is not null)
+                    fixedLength = int.Parse(lengthString);
+            }
+
             // Conditional values with previous bool
             var conditional = false;
             if (parameter.AttributeLists.Any(l => l.Attributes.Any(a => a.Name.ToString() == ConditionalAttributeName)))
@@ -259,9 +284,16 @@ public class PacketSerializerGenerator : ISourceGenerator
                 isArray = false;
                 parameterType = "byte[]";
 
-                // Read array length
-                builder.AppendLine($"var {parameterName}Length = reader.ReadVarInt();");
-                readerMethodParameters.Add($"{parameterName}Length");
+                if (fixedLength is null)
+                {
+                    // Read array length
+                    builder.AppendLine($"var {parameterName}Length = reader.ReadVarInt();");
+                    readerMethodParameters.Add($"{parameterName}Length");
+                }
+                else
+                {
+                    readerMethodParameters.Add(fixedLength.ToString());
+                }
             }
 
             // Array
@@ -281,13 +313,14 @@ public class PacketSerializerGenerator : ISourceGenerator
                 }
 
                 // Read array length
-                builder.AppendLine($"var {parameterName}Length = reader.ReadVarInt();");
+                if (fixedLength is null)
+                    builder.AppendLine($"var {parameterName}Length = reader.ReadVarInt();");
 
                 // Initialize array
-                builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = new {parameterType}[{parameterName}Length];");
+                builder.AppendLine($"{(conditional ? "" : "var ")}{parameterName} = new {parameterType}[{(fixedLength is null ? $"{parameterName}Length" : fixedLength)}];");
 
                 // Open loop
-                builder.AppendLine($"for (int i = 0; i < {parameterName}Length; i++)");
+                builder.AppendLine($"for (int i = 0; i < {parameterName}.Length; i++)");
                 builder.AppendLine("{");
 
                 if (readerMethod is null)

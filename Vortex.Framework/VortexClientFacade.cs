@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Chat.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.World.Abstraction;
+using Vortex.Shared;
 
 namespace Vortex.Framework;
 
@@ -10,6 +12,7 @@ internal class VortexClientFacade(
     IComponentContext context,
     INetworkingManager connection,
     IChatManager chat,
+    IWorldManager world,
     ILogger<VortexClientFacade> logger) : IVortexClient
 {
     public async Task StartAsync()
@@ -34,4 +37,7 @@ internal class VortexClientFacade(
 
     public Task SendChatMessage(string message)
         => chat.SendMessage(message);
+
+    public BlockState? GetBlock(Vector3i position)
+        => world.GetBlock(position);
 }

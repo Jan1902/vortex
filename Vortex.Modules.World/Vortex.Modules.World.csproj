@@ -11,5 +11,8 @@
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Vortex.Modules.World.Abstraction\Vortex.Modules.World.Abstraction.csproj" />
+    </ItemGroup>
 
 </Project>

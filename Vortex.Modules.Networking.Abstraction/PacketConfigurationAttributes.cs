@@ -1,9 +1,9 @@
 namespace Vortex.Modules.Networking.Abstraction;
 
 /// <summary>
-/// Represents the type of string length in a packet.
+/// Represents the type of length for a field.
 /// </summary>
-public enum StringLengthType
+public enum LengthType
 {
     VarIntPrefix,
     Terminated,
@@ -14,34 +14,32 @@ public enum StringLengthType
 /// Specifies the length attribute for a string parameter in a packet.
 /// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
-public class StringLengthAttribute : Attribute
+public class LengthAttribute : Attribute
 {
     /// <summary>
-    /// Gets the type of string length.
+    /// Gets the type of length.
     /// </summary>
-    public StringLengthType Type { get; }
+    public LengthType Type { get; }
 
     /// <summary>
-    /// Gets the fixed length of the string.
+    /// Gets the fixed length if applicable.
     /// </summary>
     public int? Length { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="StringLengthAttribute"/> class with the specified string length type.
+    /// Initializes a new instance of the <see cref="LengthAttribute"/> class with the specified length type.
     /// </summary>
     /// <param name="type">The type of string length.</param>
-    public StringLengthAttribute(StringLengthType type)
-    {
-        Type = type;
-    }
+    public LengthAttribute(LengthType type)
+        => Type = type;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="StringLengthAttribute"/> class with the specified fixed length.
+    /// Initializes a new instance of the <see cref="LengthAttribute"/> class with the specified fixed length.
     /// </summary>
-    /// <param name="length">The fixed length of the string.</param>
-    public StringLengthAttribute(int length)
+    /// <param name="length">The fixed length.</param>
+    public LengthAttribute(int length)
     {
-        Type = StringLengthType.Fixed;
+        Type = LengthType.Fixed;
         Length = length;
     }
 }

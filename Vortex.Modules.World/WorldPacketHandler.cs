@@ -1,10 +1,15 @@
 ﻿using Microsoft.Extensions.Logging;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.World.ChunkData;
+using Vortex.Shared;
 
 namespace Vortex.Modules.World;
 
-internal class WorldPacketHandler(INetworkingManager networking, ILogger<WorldPacketHandler> logger, ChunkDataHandler chunkDataHandler)
+internal class WorldPacketHandler(
+    INetworkingManager networking,
+    ILogger<WorldPacketHandler> logger,
+    ChunkDataHandler chunkDataHandler,
+    WorldManager worldManager)
     : IPacketHandler<ChunkBatchStart>,
     IPacketHandler<ChunkDataAndUpdateLight>,
     IPacketHandler<ChunkBatchFinished>
@@ -19,6 +24,8 @@ internal class WorldPacketHandler(INetworkingManager networking, ILogger<WorldPa
         var chunk = chunkDataHandler.HandleChunkData(packet.Data);
 
         logger.LogInformation("Received ChunkData packet for chunk X: {X} Y: {Z}", packet.ChunkX, packet.ChunkZ);
+
+        worldManager.SetChunk(new Vector2i(packet.ChunkX, packet.ChunkZ), chunk);
 
         return Task.CompletedTask;
     }
