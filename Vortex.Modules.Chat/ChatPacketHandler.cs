@@ -2,7 +2,6 @@
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Chat.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
-using Vortex.Shared;
 
 namespace Vortex.Modules.Chat;
 
@@ -11,27 +10,21 @@ internal class ChatPacketHandler(ILogger<ChatPacketHandler> logger, IEventBus ev
     IPacketHandler<PlayerChatMessage>,
     IPacketHandler<DisguisedChatMessage>
 {
-    public async Task HandleAsync(SystemChatMessage packet)
+    public Task HandleAsync(SystemChatMessage packet)
+        => PublishMessage(ChatComponent.ToPlainText(packet.Text));
+
+    public Task HandleAsync(PlayerChatMessage packet)
+        => PublishMessage(packet.Message);
+
+    public Task HandleAsync(DisguisedChatMessage packet)
+        => PublishMessage(ChatComponent.ToPlainText(packet.Message));
+
+    private async Task PublishMessage(string text)
     {
-        logger.LogInformation("Received system chat message: {Text}", packet.Text);
-
-        await eventBus.PublishAsync(new ChatMessageReceivedEvent(packet.Text));
-    }
-
-    public async Task HandleAsync(PlayerChatMessage packet)
-    {
-        logger.LogInformation("Received chat message with text '{Text}'", packet.Message);
-
-        await eventBus.PublishAsync(new ChatMessageReceivedEvent(packet.Message));
-    }
-
-    public async Task HandleAsync(DisguisedChatMessage packet)
-    {
-        var text = packet.Message is StringTag str ? str.Value : "Not implemented";
-        logger.LogInformation("Received chat message with text '{Text}'", text);
-
-        if (text is null)
+        if (string.IsNullOrEmpty(text))
             return;
+
+        logger.LogInformation("Received chat message with text '{Text}'", text);
 
         await eventBus.PublishAsync(new ChatMessageReceivedEvent(text));
     }
