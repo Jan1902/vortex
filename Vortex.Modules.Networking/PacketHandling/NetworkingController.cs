@@ -15,6 +15,11 @@ internal class NetworkingController(
 {
     private ProtocolState _state = ProtocolState.Handshake;
 
+    /// <summary>
+    /// Gets the current protocol state.
+    /// </summary>
+    public ProtocolState State => _state;
+
     private readonly IComponentContext _componentContext = componentContext;
 
     private List<PacketRegistration> _packetRegistrations = [];
