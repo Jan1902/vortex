@@ -20,6 +20,15 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
     if (parts[0] != "jeff")
         return;
 
+    if (parts[1] == "pos")
+    {
+        var position = client.Position;
+
+        await client.SendChatMessage(
+            $"I'm at {position.X:F2} {position.Y:F2} {position.Z:F2}, "
+            + (client.IsOnGround ? "standing on solid ground" : "falling"));
+    }
+
     if (parts[1] == "block" && parts.Length == 5)
     {
         var pos = new Vector3i(int.Parse(parts[2]), int.Parse(parts[3]), int.Parse(parts[4]));

@@ -35,6 +35,22 @@ public interface IVortexClient
     Chunk? GetChunk(Vector2i position);
 
     /// <summary>
+    /// Gets the current position of the bot's feet.
+    /// </summary>
+    Vector3d Position { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the bot is standing on solid ground.
+    /// </summary>
+    bool IsOnGround { get; }
+
+    /// <summary>
+    /// Points the bot at a position in the world.
+    /// </summary>
+    /// <param name="target">The position to look at.</param>
+    void LookAt(Vector3d target);
+
+    /// <summary>
     /// Event that is raised when a chat message is received.
     /// </summary>
     event AsyncEventHandler<ChatMessageReceivedEventArgs>? ChatMessageReceived;
