@@ -73,7 +73,6 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
     }
 }
 
-while (true)
-{
-
-}
+// Keep the bot alive until the process is stopped. A spin loop here would burn
+// a core and keep the process alive after its parent is gone.
+await Task.Delay(Timeout.Infinite);
