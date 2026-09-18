@@ -30,8 +30,14 @@ internal class WorldPacketHandler(
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// How many chunks per tick the client asks the server to send. Parsing a chunk
+    /// is cheap for a bot, so this is generous; the server clamps it anyway.
+    /// </summary>
+    private const float DesiredChunksPerTick = 20f;
+
     public async Task HandleAsync(ChunkBatchFinished packet)
     {
-        await networking.SendPacket(new ChunkBatchReceived(1 / 4));
+        await networking.SendPacket(new ChunkBatchReceived(DesiredChunksPerTick));
     }
 }

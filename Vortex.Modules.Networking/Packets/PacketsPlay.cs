@@ -2,14 +2,14 @@
 
 namespace Vortex.Modules.Networking.Packets;
 
-[AutoSerializedPacket(0x26)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.KeepAlive)]
 public record ClientBoundKeepAlive(long KeepAliveId) : PacketBase;
 
-[AutoSerializedPacket(0x18, packetDirection: PacketDirection.ServerBound)]
+[AutoSerializedPacket(PacketIds.Play.ServerBound.KeepAlive, packetDirection: PacketDirection.ServerBound)]
 public record ServerBoundKeepAlive(long KeepAliveId) : PacketBase;
 
-[AutoSerializedPacket(0x2b)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.Login)]
 public record LoginPlay : PacketBase;
 
-[AutoSerializedPacket(0x4b)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.ServerData)]
 public record ServerData : PacketBase;

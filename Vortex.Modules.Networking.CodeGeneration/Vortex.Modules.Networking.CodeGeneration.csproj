@@ -11,11 +11,13 @@
     <ItemGroup>
       <None Remove="Templates\ModelSerializerTemplate.ct" />
       <None Remove="Templates\PacketSerializerTemplate.ct" />
+      <None Remove="Resources\packets.json" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Include="Templates\ModelSerializerTemplate.ct" />
       <EmbeddedResource Include="Templates\PacketSerializerTemplate.ct" />
+      <EmbeddedResource Include="Resources\packets.json" />
     </ItemGroup>
 
     <ItemGroup>

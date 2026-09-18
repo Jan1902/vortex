@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Chat.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
+using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
@@ -13,6 +14,7 @@ internal class VortexClientFacade(
     INetworkingManager connection,
     IChatManager chat,
     IWorldManager world,
+    IPlayerManager player,
     ILogger<VortexClientFacade> logger,
     EventBus eventBus) : IVortexClient
 {
@@ -53,4 +55,13 @@ internal class VortexClientFacade(
 
     public Chunk? GetChunk(Vector2i position)
         => world.GetChunk(position);
+
+    public Vector3d Position
+        => player.Position;
+
+    public bool IsOnGround
+        => player.IsOnGround;
+
+    public void LookAt(Vector3d target)
+        => player.LookAt(target);
 }

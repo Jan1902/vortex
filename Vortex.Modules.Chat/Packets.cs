@@ -3,20 +3,20 @@ using Vortex.Shared;
 
 namespace Vortex.Modules.Chat;
 
-[AutoSerializedPacket(0x06, packetDirection: PacketDirection.ServerBound)]
+[AutoSerializedPacket(PacketIds.Play.ServerBound.Chat, packetDirection: PacketDirection.ServerBound)]
 public record ChatMessage(string Message, long Timestamp, long Salt, [Conditional] byte[]? Signature, int MessageCount, [BitSet(20)] bool[] Acknowledged) : PacketBase;
 
-[AutoSerializedPacket(0x6C)]
-public record SystemChatMessage(string Text, bool Overlay) : PacketBase;
+[AutoSerializedPacket(PacketIds.Play.ClientBound.SystemChat)]
+public record SystemChatMessage(NbtTag Text, bool Overlay) : PacketBase;
 
-[AutoSerializedPacket(0x39)] 
+[AutoSerializedPacket(PacketIds.Play.ClientBound.PlayerChat)] 
 public record PlayerChatMessage(Guid Sender, int Index, [Conditional][Length(256)] byte[]? MessageSignature, string Message, long Timestamp, long Salt) : PacketBase;
 
 //[PacketModel]
 //public record PreviousMessage(int MessageId, );
 
-[AutoSerializedPacket(0x11)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.Commands)]
 public record CommandsPacket : PacketBase;
 
-[AutoSerializedPacket(0x1e)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.DisguisedChat)]
 public record DisguisedChatMessage(NbtTag Message, int ChatType, NbtTag SenderName, [Conditional] NbtTag TargetName) : PacketBase;

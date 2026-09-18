@@ -2,7 +2,7 @@
 
 namespace Vortex.Modules.Player;
 
-[AutoSerializedPacket(0x40)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.PlayerPosition)]
 public record SynchronizePlayerPosition(double X, double Y, double Z, float Yaw, float Pitch, [BitField] PositionFlags Flags, int TeleportId) : PacketBase;
 
 [Flags]
@@ -15,26 +15,35 @@ public enum PositionFlags
     X_ROT = 0x10
 }
 
-[AutoSerializedPacket(0x00, packetDirection: PacketDirection.ServerBound)]
+[AutoSerializedPacket(PacketIds.Play.ServerBound.AcceptTeleportation, packetDirection: PacketDirection.ServerBound)]
 public record ConfirmTeleportation(int TeleportId) : PacketBase;
 
-[AutoSerializedPacket(0x38)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.PlayerAbilities)]
 public record PlayerAbilities : PacketBase;
 
-[AutoSerializedPacket(0x3e)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.PlayerInfoUpdate)]
 public record PlayerInfoUpdate : PacketBase;
 
-[AutoSerializedPacket(0x56)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.SetDefaultSpawnPosition)]
 public record SetDefaultSpawnPosition : PacketBase;
 
-[AutoSerializedPacket(0x71)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.TickingState)]
 public record SetTickingRate : PacketBase;
 
-[AutoSerializedPacket(0x72)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.TickingStep)]
 public record StepTick : PacketBase;
 
-[AutoSerializedPacket(0x5d)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.SetHealth)]
 public record SetHealth(float Health, int Food, float FoodSaturation) : PacketBase;
 
-[AutoSerializedPacket(0x5c)]
+[AutoSerializedPacket(PacketIds.Play.ClientBound.SetExperience)]
 public record SetExperience(float ExperienceBar, int Level, int TotalExperience) : PacketBase;
+
+[AutoSerializedPacket(PacketIds.Play.ServerBound.MovePlayerPos, packetDirection: PacketDirection.ServerBound)]
+public record SetPlayerPosition(double X, double FeetY, double Z, bool OnGround) : PacketBase;
+
+[AutoSerializedPacket(PacketIds.Play.ServerBound.MovePlayerPosRot, packetDirection: PacketDirection.ServerBound)]
+public record SetPlayerPositionAndRotation(double X, double FeetY, double Z, float Yaw, float Pitch, bool OnGround) : PacketBase;
+
+[AutoSerializedPacket(PacketIds.Play.ServerBound.MovePlayerStatusOnly, packetDirection: PacketDirection.ServerBound)]
+public record SetPlayerOnGround(bool OnGround) : PacketBase;
