@@ -25,4 +25,19 @@ public class VortexClientConfiguration
     /// Gets or sets the locale reported to the server. Default value is "en_us".
     /// </summary>
     public string Locale { get; set; } = "en_us";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to log debug detail, including every
+    /// packet the client has no definition for. Useful while working on the
+    /// protocol, noisy otherwise. Default value is <c>false</c>.
+    /// </summary>
+    public bool VerboseLogging { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to respawn automatically on death.
+    /// A dead player sits on the death screen and the server stops sending it
+    /// chunks, so a bot that does not respawn is blind until it does.
+    /// Default value is <c>true</c>.
+    /// </summary>
+    public bool AutoRespawn { get; set; } = true;
 }

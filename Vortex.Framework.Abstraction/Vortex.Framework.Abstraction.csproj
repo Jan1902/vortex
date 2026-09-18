@@ -14,4 +14,8 @@
     <ProjectReference Include="..\Vortex.Shared\Vortex.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Vortex.Modules.Player.Abstraction\Vortex.Modules.Player.Abstraction.csproj" />
+  </ItemGroup>
+
 </Project>

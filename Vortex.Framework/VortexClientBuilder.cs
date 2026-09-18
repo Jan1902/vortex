@@ -38,6 +38,18 @@ public class VortexClientBuilder
     }
 
     /// <summary>
+    /// Turns on debug logging, which includes every packet the client has no
+    /// definition for. Useful while working on the protocol, noisy otherwise.
+    /// </summary>
+    /// <returns>The current instance of <see cref="VortexClientBuilder"/>.</returns>
+    public VortexClientBuilder WithVerboseLogging()
+    {
+        _configuration.VerboseLogging = true;
+
+        return this;
+    }
+
+    /// <summary>
     /// Adds a module of type <typeparamref name="TModule"/> to the client.
     /// </summary>
     /// <typeparam name="TModule">The type of the module to add.</typeparam>
@@ -59,6 +71,9 @@ public class VortexClientBuilder
 
         var loggerConfiguration = new LoggerConfiguration()
             .WriteTo.Console();
+
+        if (_configuration.VerboseLogging)
+            loggerConfiguration.MinimumLevel.Debug();
 
         containerBuilder.RegisterSerilog(loggerConfiguration);
 

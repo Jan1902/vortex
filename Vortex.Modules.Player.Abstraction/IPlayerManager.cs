@@ -33,17 +33,21 @@ public interface IPlayerManager
     float Pitch { get; }
 
     /// <summary>
+    /// Gets the player's current health, out of twenty.
+    /// </summary>
+    float Health { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the player is alive. A dead player sits on
+    /// the death screen and receives no chunks until it respawns.
+    /// </summary>
+    bool IsAlive { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the server has placed the player in the
     /// world yet. Nothing can be moved before that happened.
     /// </summary>
     bool IsSpawned { get; }
-
-    /// <summary>
-    /// Sets the horizontal velocity the physics loop applies each tick.
-    /// </summary>
-    /// <param name="x">Velocity along the X axis in blocks per tick.</param>
-    /// <param name="z">Velocity along the Z axis in blocks per tick.</param>
-    void SetHorizontalVelocity(double x, double z);
 
     /// <summary>
     /// Points the player in a direction.
