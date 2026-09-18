@@ -1,4 +1,5 @@
 ﻿using Vortex.Shared;
+using Vortex.Modules.Player.Abstraction;
 
 namespace Vortex.Framework.Abstraction;
 
@@ -49,6 +50,12 @@ public interface IVortexClient
     /// </summary>
     /// <param name="target">The position to look at.</param>
     void LookAt(Vector3d target);
+
+    /// <summary>
+    /// Gets the movement controller, which walks in a given direction and reports
+    /// whether it arrived or was blocked. Deciding where to walk belongs above it.
+    /// </summary>
+    IMovementController Movement { get; }
 
     /// <summary>
     /// Event that is raised when a chat message is received.

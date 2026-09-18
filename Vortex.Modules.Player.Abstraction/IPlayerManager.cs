@@ -39,13 +39,6 @@ public interface IPlayerManager
     bool IsSpawned { get; }
 
     /// <summary>
-    /// Sets the horizontal velocity the physics loop applies each tick.
-    /// </summary>
-    /// <param name="x">Velocity along the X axis in blocks per tick.</param>
-    /// <param name="z">Velocity along the Z axis in blocks per tick.</param>
-    void SetHorizontalVelocity(double x, double z);
-
-    /// <summary>
     /// Points the player in a direction.
     /// </summary>
     /// <param name="yaw">The horizontal angle in degrees.</param>

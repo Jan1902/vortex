@@ -15,6 +15,7 @@ internal class VortexClientFacade(
     IChatManager chat,
     IWorldManager world,
     IPlayerManager player,
+    IMovementController movement,
     ILogger<VortexClientFacade> logger,
     EventBus eventBus) : IVortexClient
 {
@@ -64,4 +65,7 @@ internal class VortexClientFacade(
 
     public void LookAt(Vector3d target)
         => player.LookAt(target);
+
+    public IMovementController Movement
+        => movement;
 }

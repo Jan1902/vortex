@@ -1,4 +1,5 @@
 ﻿using Vortex.Framework;
+using Vortex.Modules.Player.Abstraction;
 using Vortex.Framework.Abstraction;
 using Vortex.Shared;
 
@@ -27,6 +28,24 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(
             $"I'm at {position.X:F2} {position.Y:F2} {position.Z:F2}, "
             + (client.IsOnGround ? "standing on solid ground" : "falling"));
+    }
+
+    if (parts[1] == "walk" && parts.Length == 3)
+    {
+        var blocks = double.Parse(parts[2]);
+
+        await client.SendChatMessage($"Walking {blocks} blocks east...");
+
+        var result = await client.Movement.Move(new Vector3d(1, 0, 0), blocks, MovementMode.Walk, autoJump: true);
+
+        await client.SendChatMessage($"{result} at {client.Position.X:F2} {client.Position.Y:F2} {client.Position.Z:F2}");
+    }
+
+    if (parts[1] == "jump")
+    {
+        client.Movement.Jump();
+
+        await client.SendChatMessage("Hop!");
     }
 
     if (parts[1] == "block" && parts.Length == 5)

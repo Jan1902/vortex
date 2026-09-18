@@ -11,7 +11,8 @@ namespace Vortex.Modules.Player;
 internal class PlayerManager(
     ILogger<PlayerManager> logger,
     INetworkingManager networking,
-    PlayerPhysics physics) : IPlayerManager, IDisposable
+    PlayerPhysics physics,
+    MovementController movement) : IPlayerManager, IDisposable
 {
     /// <summary>The server runs at 20 ticks per second.</summary>
     private static readonly TimeSpan _tickInterval = TimeSpan.FromMilliseconds(50);
@@ -74,12 +75,6 @@ internal class PlayerManager(
 
     public bool IsSpawned => _tickLoop is not null;
 
-    public void SetHorizontalVelocity(double x, double z)
-    {
-        lock (_stateLock)
-            _velocity = _velocity with { X = x, Z = z };
-    }
-
     public void Look(float yaw, float pitch)
     {
         lock (_stateLock)
@@ -133,6 +128,9 @@ internal class PlayerManager(
             _awaitingTeleportConfirmation = true;
         }
 
+        // A teleport invalidates whatever the player was walking towards.
+        movement.Stop();
+
         logger.LogInformation("Player position synchronized to {X:F2} {Y:F2} {Z:F2}",
             packet.X, packet.Y, packet.Z);
 
@@ -183,14 +181,17 @@ internal class PlayerManager(
     {
         Vector3d position;
         Vector3d velocity;
+        bool onGround;
 
         lock (_stateLock)
         {
             position = _position;
             velocity = _velocity;
+            onGround = _onGround;
         }
 
-        var step = physics.Step(position, velocity);
+        var input = movement.GetInput(position);
+        var step = physics.Step(position, velocity, onGround, input);
 
         lock (_stateLock)
         {
@@ -198,6 +199,8 @@ internal class PlayerManager(
             _velocity = step.Velocity;
             _onGround = step.OnGround;
         }
+
+        movement.OnStepped(step);
 
         await SendMovement();
     }
