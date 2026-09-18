@@ -32,3 +32,19 @@ public record AcknowledgeFinishConfiguration : PacketBase;
 
 [AutoSerializedPacket(PacketIds.Configuration.ClientBound.UpdateTags, ProtocolState.Configuration)]
 public record UpdateTags : PacketBase;
+
+/// <summary>
+/// Tells the server how this client wants to be served. The server derives the
+/// view distance it sends chunks for from this, so it has to be sent during
+/// configuration rather than left out.
+/// </summary>
+[AutoSerializedPacket(PacketIds.Configuration.ServerBound.ClientInformation, ProtocolState.Configuration, PacketDirection.ServerBound)]
+public record ClientInformation(
+    string Locale,
+    byte ViewDistance,
+    int ChatMode,
+    bool ChatColors,
+    byte DisplayedSkinParts,
+    int MainHand,
+    bool EnableTextFiltering,
+    bool AllowServerListings) : PacketBase;
