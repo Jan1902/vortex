@@ -34,6 +34,9 @@ internal class PlayerManager(
     private float _yaw;
     private float _pitch;
 
+    /// <summary>Assumed full until the server says otherwise.</summary>
+    private float _health = 20;
+
     private Vector3d _lastSentPosition = Vector3d.Zero;
     private float _lastSentYaw;
     private float _lastSentPitch;
@@ -73,7 +76,23 @@ internal class PlayerManager(
         get { lock (_stateLock) return _pitch; }
     }
 
+    public float Health
+    {
+        get { lock (_stateLock) return _health; }
+    }
+
+    public bool IsAlive => Health > 0;
+
     public bool IsSpawned => _tickLoop is not null;
+
+    /// <summary>
+    /// Records the health the server reported.
+    /// </summary>
+    public void UpdateHealth(float health)
+    {
+        lock (_stateLock)
+            _health = health;
+    }
 
     public void Look(float yaw, float pitch)
     {

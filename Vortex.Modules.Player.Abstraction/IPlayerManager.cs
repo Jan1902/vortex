@@ -33,6 +33,17 @@ public interface IPlayerManager
     float Pitch { get; }
 
     /// <summary>
+    /// Gets the player's current health, out of twenty.
+    /// </summary>
+    float Health { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the player is alive. A dead player sits on
+    /// the death screen and receives no chunks until it respawns.
+    /// </summary>
+    bool IsAlive { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the server has placed the player in the
     /// world yet. Nothing can be moved before that happened.
     /// </summary>

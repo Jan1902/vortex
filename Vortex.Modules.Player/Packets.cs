@@ -47,3 +47,19 @@ public record SetPlayerPositionAndRotation(double X, double FeetY, double Z, flo
 
 [AutoSerializedPacket(PacketIds.Play.ServerBound.MovePlayerStatusOnly, packetDirection: PacketDirection.ServerBound)]
 public record SetPlayerOnGround(bool OnGround) : PacketBase;
+
+
+/// <summary>
+/// Action ids for <see cref="ClientCommand"/>.
+/// </summary>
+public static class ClientCommandAction
+{
+    /// <summary>Leaves the death screen. A dead player receives no chunks until this is sent.</summary>
+    public const int PerformRespawn = 0;
+
+    /// <summary>Asks the server for the player's statistics.</summary>
+    public const int RequestStatistics = 1;
+}
+
+[AutoSerializedPacket(PacketIds.Play.ServerBound.ClientCommand, packetDirection: PacketDirection.ServerBound)]
+public record ClientCommand(int ActionId) : PacketBase;

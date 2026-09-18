@@ -54,7 +54,9 @@ internal class NetworkingController(
         var registration = _packetRegistrations.FirstOrDefault(p => p.PacketId == packetId && p.State == _state);
         if (registration is null)
         {
-            //logger.LogInformation("Received unknown packet with id 0x{packetId:X2}", packetId);
+            // Useful while implementing the protocol: a packet the client has no
+            // definition for is silently dropped otherwise.
+            logger.LogDebug("Ignored unknown packet with id 0x{packetId:X2} in state {state}", packetId, _state);
             return;
         }
 
