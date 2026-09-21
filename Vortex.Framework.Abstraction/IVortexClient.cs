@@ -1,4 +1,5 @@
 ﻿using Vortex.Shared;
+using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 
 namespace Vortex.Framework.Abstraction;
@@ -56,6 +57,13 @@ public interface IVortexClient
     /// whether it arrived or was blocked. Deciding where to walk belongs above it.
     /// </summary>
     IMovementController Movement { get; }
+
+    /// <summary>
+    /// Gets the brain, which runs tasks and reports what the bot is currently
+    /// working on. This is the way to give the bot something to do beyond single
+    /// movements.
+    /// </summary>
+    IBotBrain Brain { get; }
 
     /// <summary>
     /// Event that is raised when a chat message is received.

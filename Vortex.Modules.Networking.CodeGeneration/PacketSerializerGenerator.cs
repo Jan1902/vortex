@@ -394,6 +394,7 @@ public class PacketSerializerGenerator : ISourceGenerator
             "bool" => "Bool",
             "string" => "StringWithVarIntPrefix",
             "Guid" => "UUID",
+            "Vector3i" => "Position",
             "NbtTag" => "NbtTag",
             _ => null
         };

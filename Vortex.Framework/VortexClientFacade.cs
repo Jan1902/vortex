@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Microsoft.Extensions.Logging;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Chat.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.Player.Abstraction;
@@ -16,6 +17,7 @@ internal class VortexClientFacade(
     IWorldManager world,
     IPlayerManager player,
     IMovementController movement,
+    IBotBrain brain,
     ILogger<VortexClientFacade> logger,
     EventBus eventBus) : IVortexClient
 {
@@ -68,4 +70,7 @@ internal class VortexClientFacade(
 
     public IMovementController Movement
         => movement;
+
+    public IBotBrain Brain
+        => brain;
 }

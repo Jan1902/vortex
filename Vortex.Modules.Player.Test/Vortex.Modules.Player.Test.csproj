@@ -16,6 +16,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vortex.Modules.Player\Vortex.Modules.Player.csproj" />
+
+    <!-- The search promises a reach; these tests are what hold the physics to it. -->
+    <ProjectReference Include="..\Vortex.Modules.Navigation.Abstraction\Vortex.Modules.Navigation.Abstraction.csproj" />
   </ItemGroup>
 
   <ItemGroup>

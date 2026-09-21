@@ -31,6 +31,13 @@ internal class PlayerManager(
     private Vector3d _position = Vector3d.Zero;
     private Vector3d _velocity = Vector3d.Zero;
     private bool _onGround;
+
+    /// <summary>
+    /// Whether the last step was stopped by geometry. Carried across ticks
+    /// because running into something is only known once the step has been
+    /// taken, and is reacted to on the tick after the bump.
+    /// </summary>
+    private bool _wasBlocked;
     private float _yaw;
     private float _pitch;
 
@@ -82,6 +89,11 @@ internal class PlayerManager(
     }
 
     public bool IsAlive => Health > 0;
+
+    public bool IsPositionSynchronized
+    {
+        get { lock (_stateLock) return !_awaitingTeleportConfirmation; }
+    }
 
     public bool IsSpawned => _tickLoop is not null;
 
@@ -147,8 +159,9 @@ internal class PlayerManager(
             _awaitingTeleportConfirmation = true;
         }
 
-        // A teleport invalidates whatever the player was walking towards.
-        movement.Stop();
+        // A teleport invalidates whatever the player was walking towards, and
+        // the caller has to be able to tell that apart from a deliberate stop.
+        movement.Desynchronize();
 
         logger.LogInformation("Player position synchronized to {X:F2} {Y:F2} {Z:F2}",
             packet.X, packet.Y, packet.Z);
@@ -198,28 +211,20 @@ internal class PlayerManager(
 
     private async Task Tick()
     {
-        Vector3d position;
-        Vector3d velocity;
-        bool onGround;
+        MovementState state;
 
         lock (_stateLock)
-        {
-            position = _position;
-            velocity = _velocity;
-            onGround = _onGround;
-        }
+            state = new MovementState(_position, _velocity, _onGround, _wasBlocked);
 
-        var input = movement.GetInput(position);
-        var step = physics.Step(position, velocity, onGround, input);
+        var step = physics.Step(state.Position, state.Velocity, state.OnGround, movement.Tick(state));
 
         lock (_stateLock)
         {
             _position = step.Position;
             _velocity = step.Velocity;
             _onGround = step.OnGround;
+            _wasBlocked = step.Blocked;
         }
-
-        movement.OnStepped(step);
 
         await SendMovement();
     }

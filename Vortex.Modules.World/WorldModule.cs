@@ -10,6 +10,7 @@ public class WorldModule : IModule
     public void Load(ContainerBuilder builder)
     {
         builder.RegisterType<WorldPacketHandler>().AsImplementedInterfaces();
+        builder.RegisterType<BlockUpdateHandler>().AsImplementedInterfaces();
         builder.RegisterType<WorldManager>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         builder.RegisterType<ChunkDataHandler>();

@@ -26,6 +26,20 @@ internal class PlayerPhysics(IWorldManager world)
     public const double HorizontalDrag = 0.91;
 
     /// <summary>
+    /// How much speed the player can add in mid-air each tick by holding a
+    /// direction.
+    /// </summary>
+    /// <remarks>
+    /// Far less than on the ground: in the air the player mostly keeps the
+    /// momentum it took off with. At walking speed this almost exactly cancels
+    /// <see cref="HorizontalDrag"/>, so a running jump carries on at the speed
+    /// it started with, while a jump taken from a standstill barely moves
+    /// forward at all -- which is what lands the player on top of the block it
+    /// jumped at rather than beyond it.
+    /// </remarks>
+    public const double AirControl = 0.02;
+
+    /// <summary>
     /// Friction of an ordinary block, applied on top of the air resistance while
     /// standing on it. Without it the player slides for metres after stopping, as
     /// though the whole world were ice.
@@ -42,10 +56,10 @@ internal class PlayerPhysics(IWorldManager world)
     public const double StepHeight = 0.6;
 
     /// <summary>Width of the player's bounding box, centred on its position.</summary>
-    public const double Width = 0.6;
+    public const double Width = PlayerHitbox.Width;
 
     /// <summary>Height of the player's bounding box, measured up from its feet.</summary>
-    public const double Height = 1.8;
+    public const double Height = PlayerHitbox.Height;
 
     /// <summary>Velocities below this are treated as standing still.</summary>
     private const double NegligibleVelocity = 0.003;
@@ -74,15 +88,11 @@ internal class PlayerPhysics(IWorldManager world)
     /// <param name="input">What the player is trying to do.</param>
     public PhysicsStep Step(Vector3d position, Vector3d velocity, bool onGround, MovementInput input)
     {
-        // Horizontal velocity follows the input directly rather than accelerating
-        // towards it. The ramp-up of the real game is not modelled.
-        var decay = onGround ? HorizontalDrag * GroundFriction : HorizontalDrag;
+        var horizontal = Steer(velocity, onGround, input);
 
-        var horizontal = input.Direction is null
-            ? new Vector3d(velocity.X * decay, 0, velocity.Z * decay)
-            : Normalize(input.Direction) * SpeedOf(input.Mode);
+        var jumping = input.Jump && onGround;
 
-        var verticalVelocity = input.Jump && onGround
+        var verticalVelocity = jumping
             // A jump replaces this tick's fall instead of being damped by it.
             ? JumpVelocity
             : Math.Max((velocity.Y - Gravity) * VerticalDrag, -TerminalVelocity);
@@ -95,8 +105,12 @@ internal class PlayerPhysics(IWorldManager world)
         var afterVertical = position with { Y = y };
 
         // Stepping up is only possible from the ground, otherwise the player
-        // would climb walls mid-jump.
-        var mayStepUp = input.AllowStepUp && (onGround || landed);
+        // would climb walls mid-jump. Not on the tick the player jumped either:
+        // the jump is already the way up, and stepping as well would add the
+        // obstacle's height on top of it, putting the player on the obstacle
+        // with a full jump still left to spend -- which throws it off the far
+        // side instead of landing it on top.
+        var mayStepUp = input.AllowStepUp && !jumping && (onGround || landed);
         var protectFromLedges = input.Mode == MovementMode.Sneak && (onGround || landed);
 
         var afterX = ResolveHorizontal(afterVertical, Damp(horizontal.X), Axis.X, mayStepUp, protectFromLedges, out var blockedX);
@@ -108,6 +122,32 @@ internal class PlayerPhysics(IWorldManager world)
             blockedZ ? 0 : Damp(horizontal.Z));
 
         return new PhysicsStep(afterZ, newVelocity, landed || IsSupported(afterZ), blockedX || blockedZ);
+    }
+
+    /// <summary>
+    /// The horizontal velocity the player is trying for this tick.
+    /// </summary>
+    /// <remarks>
+    /// On the ground the input sets the speed directly; the ramp-up of the real
+    /// game is not modelled. In the air it can only nudge: the player keeps what
+    /// momentum it has, minus drag, plus <see cref="AirControl"/>. That is the
+    /// difference between hopping onto a block and sailing over it.
+    /// </remarks>
+    private static Vector3d Steer(Vector3d velocity, bool onGround, MovementInput input)
+    {
+        if (onGround)
+            return input.Direction is null
+                ? new Vector3d(velocity.X * HorizontalDrag * GroundFriction, 0, velocity.Z * HorizontalDrag * GroundFriction)
+                : Normalize(input.Direction) * SpeedOf(input.Mode);
+
+        var drifting = new Vector3d(velocity.X * HorizontalDrag, 0, velocity.Z * HorizontalDrag);
+
+        if (input.Direction is null)
+            return drifting;
+
+        var steering = Normalize(input.Direction) * AirControl;
+
+        return new Vector3d(drifting.X + steering.X, 0, drifting.Z + steering.Z);
     }
 
     private static Vector3d Normalize(Vector3d direction)

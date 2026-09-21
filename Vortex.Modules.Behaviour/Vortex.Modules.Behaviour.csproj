@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="../ProjectConfiguration.Base.csproj" />
+
+    <!--
+      Deliberately does not import ProjectConfiguration.Module: nothing here
+      touches the protocol, so the packet source generator has no work to do.
+    -->
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vortex.Modules.Behaviour.Abstraction\Vortex.Modules.Behaviour.Abstraction.csproj" />
+        <ProjectReference Include="..\Vortex.Modules.Navigation.Abstraction\Vortex.Modules.Navigation.Abstraction.csproj" />
+        <ProjectReference Include="..\Vortex.Modules.Player.Abstraction\Vortex.Modules.Player.Abstraction.csproj" />
+        <ProjectReference Include="..\Vortex.Modules.World.Abstraction\Vortex.Modules.World.Abstraction.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Vortex.Modules.Behaviour.Test" />
+    </ItemGroup>
+
+</Project>

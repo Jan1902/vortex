@@ -66,6 +66,12 @@ public interface IMinecraftBinaryWriter : IDisposable
     void WritePosition(Vector3i value);
 
     /// <summary>
+    /// Writes a variable length long to the binary stream.
+    /// </summary>
+    /// <param name="value">The value to write.</param>
+    void WriteVarLong(long value);
+
+    /// <summary>
     /// Writes a short value to the underlying stream.
     /// </summary>
     /// <param name="value">The short value to write.</param>

@@ -44,6 +44,18 @@ public interface IPlayerManager
     bool IsAlive { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the server and the client currently agree
+    /// on where the player is.
+    /// </summary>
+    /// <remarks>
+    /// The client works its position out itself and only hears from the server
+    /// when the two disagree. This goes false from the moment such a correction
+    /// arrives until it has been acknowledged -- a window in which the position
+    /// is being rewritten and nothing should be concluded from it.
+    /// </remarks>
+    bool IsPositionSynchronized { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the server has placed the player in the
     /// world yet. Nothing can be moved before that happened.
     /// </summary>

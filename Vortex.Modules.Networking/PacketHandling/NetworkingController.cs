@@ -56,7 +56,7 @@ internal class NetworkingController(
         {
             // Useful while implementing the protocol: a packet the client has no
             // definition for is silently dropped otherwise.
-            logger.LogDebug("Ignored unknown packet with id 0x{packetId:X2} in state {state}", packetId, _state);
+            logger.LogTrace("Ignored unknown packet with id 0x{packetId:X2} in state {state}", packetId, _state);
             return;
         }
 
@@ -65,7 +65,7 @@ internal class NetworkingController(
 
         var packet = packetSerializer.DeserializePacket(registration.PacketType, reader);
 
-        logger.LogInformation("Received packet of type {packetType}", packet.GetType().Name);
+        logger.LogTrace("Received packet of type {packetType}", packet.GetType().Name);
 
         var eventType = typeof(PacketReceivedEvent<>).MakeGenericType(registration.PacketType);
         var packetReceivedEvent = Activator.CreateInstance(eventType, [packet]);

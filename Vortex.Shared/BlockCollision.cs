@@ -1,6 +1,4 @@
-﻿using Vortex.Shared;
-
-namespace Vortex.Modules.Player;
+﻿namespace Vortex.Shared;
 
 /// <summary>
 /// Decides whether a block stops the player from moving through it.
@@ -13,7 +11,12 @@ namespace Vortex.Modules.Player;
 /// terrain, and wrong for anything that needs exact shapes. Real collision
 /// shapes are a separate piece of work.
 /// </remarks>
-internal static class BlockCollision
+/// <remarks>
+/// Lives here rather than in the player module because the pathfinder asks the
+/// same question of the same block data, and the answer must not be allowed to
+/// drift apart between the two.
+/// </remarks>
+public static class BlockCollision
 {
     /// <summary>
     /// Blocks the player passes straight through.

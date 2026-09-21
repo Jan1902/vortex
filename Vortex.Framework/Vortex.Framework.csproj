@@ -13,8 +13,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Vortex.Framework.Test" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Vortex.Framework.Abstraction\Vortex.Framework.Abstraction.csproj" />
+    <ProjectReference Include="..\Vortex.Modules.Behaviour\Vortex.Modules.Behaviour.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Chat\Vortex.Modules.Chat.csproj" />
+    <ProjectReference Include="..\Vortex.Modules.Navigation\Vortex.Modules.Navigation.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Networking\Vortex.Modules.Networking.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Player\Vortex.Modules.Player.csproj" />
     <ProjectReference Include="..\Vortex.Modules.World\Vortex.Modules.World.csproj" />

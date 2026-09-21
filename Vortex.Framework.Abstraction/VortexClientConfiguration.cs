@@ -27,11 +27,20 @@ public class VortexClientConfiguration
     public string Locale { get; set; } = "en_us";
 
     /// <summary>
-    /// Gets or sets a value indicating whether to log debug detail, including every
-    /// packet the client has no definition for. Useful while working on the
-    /// protocol, noisy otherwise. Default value is <c>false</c>.
+    /// Gets or sets a value indicating whether to log debug detail: every step
+    /// the task runner takes and why, movements ending, blocks changing.
+    /// Default value is <c>false</c>.
     /// </summary>
     public bool VerboseLogging { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to log the protocol as well,
+    /// including every packet the client has no definition for. Useful while
+    /// working on the protocol and far too noisy to read anything else
+    /// alongside. Implies <see cref="VerboseLogging"/>.
+    /// Default value is <c>false</c>.
+    /// </summary>
+    public bool ProtocolLogging { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to respawn automatically on death.

@@ -21,7 +21,13 @@ internal static class Position
     {
         var writer = new MinecraftBinaryWriter(stream);
 
-        var result = (value.X & 0x3FFFFFF) << 38 | (value.Z & 0x3FFFFFF) << 12 | value.Y & 0xFFF;
+        // Every part has to be widened to long before it is shifted. As ints
+        // these shifts are taken modulo 32, so the X and Z fields would land on
+        // top of each other and the position would go out as nonsense.
+        var result = ((long)(value.X & 0x3FFFFFF) << 38)
+            | ((long)(value.Z & 0x3FFFFFF) << 12)
+            | (uint)(value.Y & 0xFFF);
+
         writer.WriteLong(result);
     }
 

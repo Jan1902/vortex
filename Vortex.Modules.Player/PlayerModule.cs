@@ -9,6 +9,8 @@ public class PlayerModule : IModule
     {
         builder.RegisterType<PlayerManager>().AsImplementedInterfaces().AsSelf().SingleInstance();
         builder.RegisterType<PlayerPhysics>().AsSelf().SingleInstance();
+        builder.RegisterType<MovementSimulator>().AsSelf().SingleInstance();
+        builder.RegisterType<MovementPlans>().AsSelf().SingleInstance();
         builder.RegisterType<MovementController>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         builder.RegisterType<PlayerPacketHandler>().AsImplementedInterfaces();

@@ -1,57 +1,80 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Player;
 
 /// <summary>
-/// Turns movement requests into per-tick input and reports how they ended.
+/// Runs one movement plan at a time against the real player, and reports how it
+/// ended.
 /// </summary>
-internal class MovementController(ILogger<MovementController> logger) : IMovementController
+/// <remarks>
+/// What a movement <em>is</em> lives in <see cref="PlanRunner"/>, and what each
+/// kind of movement looks like lives in <see cref="MovementPlans"/>. What is
+/// left here is everything that only matters because this is the live player and
+/// not a simulation: one movement at a time, waking up whoever is awaiting it,
+/// and keeping track of where the player was last seen so that a plan can be
+/// worked out from it.
+/// </remarks>
+internal class MovementController(MovementPlans plans, ILogger<MovementController> logger) : IMovementController
 {
-    /// <summary>How close to the target counts as having arrived.</summary>
-    private const double ArrivalTolerance = 0.2;
-
-    /// <summary>
-    /// Progress smaller than this over <see cref="StuckTicks"/> ticks counts as
-    /// being stuck. This catches the cases where the player grinds along a corner
-    /// without ever cleanly colliding.
-    /// </summary>
-    private const double MinimumProgress = 0.05;
-
-    private const int StuckTicks = 10;
+    /// <summary>A movement shorter than this has already happened.</summary>
+    private const double NothingToDo = 1e-6;
 
     private readonly object _lock = new();
 
-    private Movement? _current;
+    private Execution? _current;
     private bool _jumpRequested;
+
+    /// <summary>
+    /// The last state the physics loop reported. A plan is worked out from where
+    /// the player is, and a caller asking for a movement between two ticks has
+    /// no way to hand that over itself.
+    /// </summary>
+    private MovementState _lastState = MovementState.Unknown;
 
     public bool IsMoving
     {
         get { lock (_lock) return _current is not null; }
     }
 
-    public Task<MovementResult> Move(Vector3d direction, double distance, MovementMode mode = MovementMode.Walk, bool autoJump = false)
+    public Task<MovementResult> WalkTo(Vector3d target, MovementMode mode = MovementMode.Walk, bool autoJump = false)
+        => Plan(origin => MovementPlans.Walk(origin, target, mode, autoJump));
+
+    public Task<MovementResult> StepUpTo(Vector3d target, MovementMode mode = MovementMode.Walk)
+        => Plan(origin => MovementPlans.StepUp(origin, target, mode));
+
+    public Task<MovementResult> DropTo(Vector3d target, MovementMode mode = MovementMode.Walk)
+        => Plan(origin => plans.Drop(origin, target, mode));
+
+    public Task<MovementResult> JumpTo(Vector3d takeOff, Vector3d landing, MovementMode mode = MovementMode.Walk)
+        => Plan(origin => plans.Leap(origin, takeOff, landing, mode));
+
+    public Task<MovementResult> Execute(MovementPlan plan)
     {
-        var length = Math.Sqrt(direction.X * direction.X + direction.Z * direction.Z);
+        lock (_lock)
+            return Start(plan);
+    }
 
-        if (length < 1e-6 || distance <= 0)
-            return Task.FromResult(MovementResult.Arrived);
-
-        var normalized = new Vector3d(direction.X / length, 0, direction.Z / length);
-        var movement = new Movement(normalized, distance, mode, autoJump);
-
-        Movement? replaced;
-
+    /// <summary>
+    /// Builds a plan from where the player was last seen and runs it.
+    /// </summary>
+    /// <remarks>
+    /// A movement aimed at somewhere the player already is has nothing to do,
+    /// and a plan built for it would have a direction of nowhere and a condition
+    /// that is already true.
+    /// </remarks>
+    private Task<MovementResult> Plan(Func<Vector3d, MovementPlan> build)
+    {
         lock (_lock)
         {
-            replaced = _current;
-            _current = movement;
+            var origin = _lastState.Position;
+            var plan = build(origin);
+
+            return origin.HorizontalDistanceTo(plan.Destination) < NothingToDo
+                ? Task.FromResult(MovementResult.Arrived)
+                : Start(plan);
         }
-
-        replaced?.Complete(MovementResult.Cancelled);
-
-        return movement.Completion.Task;
     }
 
     public void Jump()
@@ -60,153 +83,108 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
             _jumpRequested = true;
     }
 
-    public void Stop()
+    /// <summary>
+    /// Takes over from whatever was running.
+    /// </summary>
+    /// <remarks>Called under the lock.</remarks>
+    private Task<MovementResult> Start(MovementPlan plan)
     {
-        Movement? cancelled;
+        var execution = new Execution(plan);
+
+        var replaced = _current;
+        _current = execution;
+
+        replaced?.Complete(MovementResult.Cancelled);
+
+        return execution.Completion.Task;
+    }
+
+    /// <summary>
+    /// Reports that the server moved the player itself.
+    /// </summary>
+    /// <remarks>
+    /// The plan in progress was worked out from where the player believed it
+    /// was. After a correction every point in it means nothing, so the movement
+    /// ends -- but as something other than a cancellation, because the caller is
+    /// expected to try again rather than give up.
+    /// </remarks>
+    internal void Desynchronize()
+        => Abandon(MovementResult.Desynced);
+
+    public void Stop()
+        => Abandon(MovementResult.Cancelled);
+
+    private void Abandon(MovementResult result)
+    {
+        Execution? abandoned;
 
         lock (_lock)
         {
-            cancelled = _current;
+            abandoned = _current;
             _current = null;
         }
 
-        cancelled?.Complete(MovementResult.Cancelled);
+        abandoned?.Complete(result);
     }
 
     /// <summary>
-    /// Produces the input for this tick.
+    /// Advances the movement by one tick and says what the player should do.
     /// </summary>
-    /// <param name="position">The player's current position.</param>
-    internal MovementInput GetInput(Vector3d position)
+    /// <remarks>
+    /// One call per tick, taking the state the coming step starts from. The
+    /// state after a step is the state before the next one, so there is nothing
+    /// to feed back separately: reading and deciding happen on the same numbers,
+    /// which is what keeps a phase from being judged on a tick it never ran.
+    /// </remarks>
+    /// <param name="tick">Where the player is and what it is doing.</param>
+    internal MovementInput Tick(MovementState tick)
     {
+        Execution? finished = null;
+        MovementResult? result;
+        MovementInput input;
+
         lock (_lock)
         {
-            var jump = _jumpRequested;
+            _lastState = tick;
+
+            var requestedJump = _jumpRequested;
             _jumpRequested = false;
 
             if (_current is null)
-                return MovementInput.Idle with { Jump = jump };
+                return MovementInput.Idle with { Jump = requestedJump };
 
-            // The target is fixed when the movement starts rather than recomputed
-            // from the current position, so drifting sideways does not accumulate
-            // across a sequence of moves.
-            _current.EnsureTarget(position);
+            (input, result) = _current.Runner.Step(tick);
 
-            // Auto jump only fires while actually blocked, and only once per
-            // obstacle, so a wall does not turn into continuous hopping.
-            var shouldJump = jump || (_current.AutoJump && _current.WantsJump);
-            _current.WantsJump = false;
+            input = input with { Jump = input.Jump || requestedJump };
 
-            return new MovementInput(_current.Direction, _current.Mode, shouldJump);
-        }
-    }
-
-    /// <summary>
-    /// Feeds back what the physics made of the input, ending the movement when it
-    /// arrived or stopped making progress.
-    /// </summary>
-    internal void OnStepped(PhysicsStep step)
-    {
-        Movement? finished = null;
-        var result = MovementResult.Arrived;
-
-        lock (_lock)
-        {
-            if (_current is null)
-                return;
-
-            var remaining = _current.RemainingDistance(step.Position);
-
-            if (remaining <= ArrivalTolerance || _current.HasPassedTarget(step.Position))
+            if (result is not null)
             {
                 finished = _current;
                 _current = null;
-                result = MovementResult.Arrived;
-            }
-            else if (step.Blocked && _current.AutoJump && step.OnGround && !_current.JumpAttempted)
-            {
-                // Give the obstacle one jump before declaring it impassable.
-                _current.WantsJump = true;
-                _current.JumpAttempted = true;
-            }
-            else if (_current.TrackProgress(remaining))
-            {
-                finished = _current;
-                _current = null;
-                result = MovementResult.Blocked;
             }
         }
 
         if (finished is null)
-            return;
+            return input;
 
-        logger.LogDebug("Movement ended as {Result}", result);
+        var destination = finished.Runner.Plan.Destination;
 
-        finished.Complete(result);
+        logger.LogDebug("Movement to {X:F1} {Y:F1} {Z:F1} ended as {Result}{Reason}",
+            destination.X, destination.Y, destination.Z, result,
+            finished.Runner.Reason is { Length: > 0 } reason ? $": {reason}" : string.Empty);
+
+        finished.Complete(result!.Value);
+
+        return input;
     }
 
-    /// <summary>
-    /// One movement request in progress.
-    /// </summary>
-    private sealed class Movement(Vector3d direction, double distance, MovementMode mode, bool autoJump)
+    /// <summary>One plan in progress, and whoever is waiting for it.</summary>
+    private sealed class Execution(MovementPlan plan)
     {
-        public Vector3d Direction { get; } = direction;
-
-        public MovementMode Mode { get; } = mode;
-
-        public bool AutoJump { get; } = autoJump;
+        public PlanRunner Runner { get; } = new(plan);
 
         public TaskCompletionSource<MovementResult> Completion { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public bool WantsJump { get; set; }
-
-        public bool JumpAttempted { get; set; }
-
-        private Vector3d? _target;
-        private double _bestRemaining = double.MaxValue;
-        private int _ticksWithoutProgress;
-
-        /// <summary>
-        /// Fixes the target on the first tick, based on where the player was when
-        /// the movement actually started.
-        /// </summary>
-        public void EnsureTarget(Vector3d position)
-            => _target ??= position + Direction * distance;
-
-        public double RemainingDistance(Vector3d position)
-            => _target is null ? distance : position.HorizontalDistanceTo(_target);
-
-        /// <summary>
-        /// Determines whether the player overshot the target, which a single tick
-        /// can easily do at sprinting speed.
-        /// </summary>
-        public bool HasPassedTarget(Vector3d position)
-        {
-            if (_target is null)
-                return false;
-
-            var toTarget = _target - position;
-
-            // Still ahead while the remaining vector points the same way we walk.
-            return toTarget.X * Direction.X + toTarget.Z * Direction.Z <= 0;
-        }
-
-        /// <summary>
-        /// Records progress and reports whether the movement is stuck.
-        /// </summary>
-        public bool TrackProgress(double remaining)
-        {
-            if (remaining < _bestRemaining - MinimumProgress)
-            {
-                _bestRemaining = remaining;
-                _ticksWithoutProgress = 0;
-
-                return false;
-            }
-
-            return ++_ticksWithoutProgress >= StuckTicks;
-        }
 
         public void Complete(MovementResult result)
             => Completion.TrySetResult(result);

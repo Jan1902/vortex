@@ -262,9 +262,19 @@ public class PlayerPhysicsTests
         Ledge(world, x: 1);
 
         var physics = new PlayerPhysics(world);
-        var step = physics.Step(new Vector3d(0.5, FloorTop + 0.5, 0.5), Vector3d.Zero, false, Walking());
+
+        // Drifting into the ledge with the momentum of a jump. Air control alone
+        // would not cover the distance in one tick, and the point here is what
+        // happens on contact, not how it got there.
+        var airborne = new Vector3d(0.5, FloorTop + 0.5, 0.5);
+        var step = physics.Step(airborne, new Vector3d(0.25, 0, 0), false, Walking());
 
         Assert.True(step.Blocked);
+
+        // Stopped by the ledge rather than climbing onto it: still falling,
+        // nowhere near the ledge's surface at FloorTop + 1.
+        Assert.True(step.Position.Y < airborne.Y, "should still be falling");
+        Assert.True(step.Position.Y < FloorTop + 1, "climbed onto the ledge in mid-air");
     }
 
     [Fact]

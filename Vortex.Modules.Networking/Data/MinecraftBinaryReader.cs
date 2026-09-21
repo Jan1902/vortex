@@ -45,6 +45,9 @@ public class MinecraftBinaryReader(Stream stream) : IMinecraftBinaryReader
     public ulong ReadULong()
         => _bitConverter.ToUInt64(ReadBytes(sizeof(ulong)), 0);
 
+    public long ReadVarLong()
+        => _stream.ReadVarLong();
+
     public long ReadLong()
         => _bitConverter.ToInt64(ReadBytes(sizeof(long)), 0);
 

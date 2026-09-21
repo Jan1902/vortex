@@ -23,7 +23,7 @@ internal class WorldPacketHandler(
     {
         var chunk = chunkDataHandler.HandleChunkData(packet.Data);
 
-        logger.LogInformation("Received ChunkData packet for chunk X: {X} Y: {Z}", packet.ChunkX, packet.ChunkZ);
+        logger.LogDebug("Received ChunkData packet for chunk X: {X} Y: {Z}", packet.ChunkX, packet.ChunkZ);
 
         worldManager.SetChunk(new Vector2i(packet.ChunkX, packet.ChunkZ), chunk);
 

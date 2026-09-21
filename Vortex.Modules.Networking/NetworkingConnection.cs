@@ -74,7 +74,7 @@ internal class NetworkingConnection(
         {
             await _socket.SendAsync(frame, SocketFlags.None);
 
-            logger.LogInformation("Sent packet of type {packetType}", packet.GetType().Name);
+            logger.LogTrace("Sent packet of type {packetType}", packet.GetType().Name);
         }
         catch (Exception e)
         {

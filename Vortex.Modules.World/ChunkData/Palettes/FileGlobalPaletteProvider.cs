@@ -35,4 +35,7 @@ internal class FileGlobalPaletteProvider : IGlobalPaletteProvider
 
     public BlockState GetStateFromId(int id)
         => _idToState[id];
+
+    public bool TryGetStateFromId(int id, out BlockState state)
+        => _idToState.TryGetValue(id, out state!);
 }

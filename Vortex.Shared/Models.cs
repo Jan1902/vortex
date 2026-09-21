@@ -1,6 +1,18 @@
 ﻿namespace Vortex.Shared;
 
-public record Vector3i(int X, int Y, int Z);
+public record Vector3i(int X, int Y, int Z)
+{
+    public static Vector3i Zero { get; } = new(0, 0, 0);
+
+    public static Vector3i operator +(Vector3i left, Vector3i right)
+        => new(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
+
+    public static Vector3i operator -(Vector3i left, Vector3i right)
+        => new(left.X - right.X, left.Y - right.Y, left.Z - right.Z);
+
+    public static Vector3i operator *(Vector3i vector, int factor)
+        => new(vector.X * factor, vector.Y * factor, vector.Z * factor);
+}
 public record Vector2i(int X, int Z);
 public record Vector3f(float X, float Y, float Z);
 

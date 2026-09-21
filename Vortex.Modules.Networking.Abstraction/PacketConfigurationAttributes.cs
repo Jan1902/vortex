@@ -1,4 +1,4 @@
-namespace Vortex.Modules.Networking.Abstraction;
+﻿namespace Vortex.Modules.Networking.Abstraction;
 
 /// <summary>
 /// Represents the type of length for a field.
@@ -156,7 +156,10 @@ public class OverwriteTypeAttribute(OverwriteType type) : Attribute
 /// </summary>
 public enum OverwriteType
 {
-    Int
+    Int,
+
+    /// <summary>A variable length long, as the entries of a packed array are.</summary>
+    VarLong
 }
 
 /// <summary>

@@ -14,5 +14,8 @@
     <ItemGroup>
       <ProjectReference Include="..\Vortex.Modules.World.Abstraction\Vortex.Modules.World.Abstraction.csproj" />
     </ItemGroup>
+    <ItemGroup>
+      <InternalsVisibleTo Include="Vortex.Modules.World.Test" />
+    </ItemGroup>
 
 </Project>

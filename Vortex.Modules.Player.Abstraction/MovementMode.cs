@@ -28,5 +28,13 @@ public enum MovementResult
     Blocked,
 
     /// <summary>The movement was replaced by another one or cancelled.</summary>
-    Cancelled
+    Cancelled,
+
+    /// <summary>
+    /// The server put the player somewhere else while the movement was running.
+    /// Nothing was achieved and nothing went wrong: where the movement was
+    /// headed was worked out from a position that no longer holds, so the
+    /// caller should decide again rather than treat this as failure.
+    /// </summary>
+    Desynced
 }

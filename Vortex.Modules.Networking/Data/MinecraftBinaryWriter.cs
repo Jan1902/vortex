@@ -22,6 +22,9 @@ public class MinecraftBinaryWriter(Stream stream) : IMinecraftBinaryWriter
     public void WritePosition(Vector3i value)
         => _stream.WritePosition(value);
 
+    public void WriteVarLong(long value)
+        => _stream.WriteVarLong(value);
+
     public void WriteByte(byte value)
         => _stream.WriteByte(value);
 

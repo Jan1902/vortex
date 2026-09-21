@@ -57,6 +57,12 @@ public interface IMinecraftBinaryReader : IDisposable
     Vector3i ReadPosition();
 
     /// <summary>
+    /// Reads a variable length long from the binary stream.
+    /// </summary>
+    /// <returns>The value read from the stream.</returns>
+    long ReadVarLong();
+
+    /// <summary>
     /// Reads a short value from the binary stream.
     /// </summary>
     /// <returns>The short value read from the stream.</returns>
