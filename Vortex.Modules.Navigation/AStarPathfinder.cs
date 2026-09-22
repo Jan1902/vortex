@@ -307,7 +307,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
 
             // The way is open but there is no floor: fall until something
             // catches the player, and give up if that is too far down.
-            foreach (var drop in DropsFrom(side, direction))
+            foreach (var drop in DropsFrom(side))
                 yield return (drop.Move, drop.Cost * length, heading);
 
             if (allowed.JumpGaps && JumpAcross(from, direction, allowed.Sprint) is { } leap)
@@ -320,13 +320,12 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// below it is not.
     /// </summary>
     /// <remarks>
-    /// A fall cannot be stopped once it has started, and a player that walks off
-    /// an edge may come down one block further on than it aimed. So the block
-    /// past the landing has to be as good a place to end up as the landing
-    /// itself -- or a wall, which stops the player where it was aimed.
+    /// Any floor will do, a single block with nothing beyond it included: the
+    /// movement lets go before the edge and brakes in the air, so it comes down
+    /// on the block it was aimed at rather than one further on.
     /// </remarks>
     /// <returns>At most one drop: the first floor the player would meet.</returns>
-    private IEnumerable<(Move Move, double Cost)> DropsFrom(Vector3i side, Vector3i direction)
+    private IEnumerable<(Move Move, double Cost)> DropsFrom(Vector3i side)
     {
         for (var drop = 1; drop <= MaxFallHeight; drop++)
         {
@@ -334,11 +333,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
 
             if (CanStandAt(landing))
             {
-                var beyond = Offset(landing, direction);
-
-                if (CanStandAt(beyond) || IsBlocked(beyond))
-                    yield return (new Drop(landing, drop), DropCost + drop * FallCostPerBlock);
-
+                yield return (new Drop(landing, drop), DropCost + drop * FallCostPerBlock);
                 yield break;
             }
 

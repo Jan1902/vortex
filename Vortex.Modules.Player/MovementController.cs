@@ -59,15 +59,17 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
     private const double DeadZone = 0.05;
 
     /// <summary>
-    /// How close to the landing a drop stops pushing, while still on the ground.
+    /// How far short of the middle of the landing a drop lets the player come
+    /// to rest, while it is still on the ground.
     /// </summary>
     /// <remarks>
-    /// Much earlier than a jump, because in the air there is next to no say in
-    /// where the player goes. Walking off an edge at full speed carries it a
-    /// block past the one below; letting go this far out means friction has
-    /// taken most of the speed by the time it topples over.
+    /// Walking off an edge at full speed carries it past the block below, and in
+    /// the air there is little say left in that. So the drop lets go once
+    /// friction alone would bring the player to a stop just past the point where
+    /// it topples -- going by where it would stop rather than where it is, which
+    /// is what makes the speed it goes over at the same from wherever it set off.
     /// </remarks>
-    private const double DropLetGo = 0.45;
+    private const double DropLetGo = 0.15;
 
     /// <summary>Slower than this on the ground counts as standing still.</summary>
     private const double Stalled = 0.01;
@@ -264,13 +266,24 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
             if (IsStuck(state, out var remaining))
                 return (MovementResult.Blocked, $"no ground made in {StuckTicks} ticks, {remaining:F2} blocks short");
 
-            var toTarget = Normalize(new Vector3d(
-                movement.Destination.X - state.Position.X, 0, movement.Destination.Z - state.Position.Z));
-
             var speed = Math.Sqrt(state.Velocity.X * state.Velocity.X + state.Velocity.Z * state.Velocity.Z);
 
-            var push = state.Position.HorizontalDistanceTo(movement.Destination) > DeadZone
-                && ShouldPush(state, speed);
+            // A drop is steered by where the player would come to a stop rather
+            // than where it is. On the ledge that decides when to let go; in the
+            // air the little control there is then brakes a fall that would
+            // carry it past the block, instead of pushing on towards a middle it
+            // has already overshot in all but position.
+            var aim = movement.Kind == MovementKind.Drop
+                ? Coast(state)
+                : state.Position;
+
+            var toTarget = Normalize(new Vector3d(
+                movement.Destination.X - aim.X, 0, movement.Destination.Z - aim.Z));
+
+            var left = aim.HorizontalDistanceTo(movement.Destination);
+
+            var push = left > DeadZone
+                && ShouldPush(state, speed, left);
 
             var jump = !_jumped && state.OnGround && WantsJump(state);
 
@@ -293,12 +306,19 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
         /// because in the air the player keeps nearly all the speed it has and
         /// can add or take away almost none.
         /// </remarks>
-        private bool ShouldPush(MovementState state, double speed)
+        /// <param name="remaining">
+        /// How far the destination is from where the movement is steered from:
+        /// the player itself, or for a drop, where it would come to a stop.
+        /// </param>
+        private bool ShouldPush(MovementState state, double speed, double remaining)
         {
-            var remaining = state.Position.HorizontalDistanceTo(movement.Destination);
-
             switch (movement.Kind)
             {
+                case MovementKind.Drop when !state.OnGround:
+                    // Steered by where it is drifting to, which only ever aims
+                    // it back at the landing.
+                    return true;
+
                 case MovementKind.Drop:
                     // Let go on the ground, short of the edge, so friction takes
                     // the speed off before the fall. A player that came to rest on
@@ -365,10 +385,10 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
         /// Whether the player came down on the block it was aimed at.
         /// </summary>
         /// <remarks>
-        /// A drop may also end one block further on, at the same height. There is
-        /// no stopping a fall once it has started, and a player that walks off an
-        /// edge keeps some of its speed all the way down. Baritone accepts the
-        /// same; the route only plans a drop where that block is safe to land on.
+        /// A drop may also end one block further on, at the same height, where
+        /// the ground carries on past the landing and the player has drifted onto
+        /// it. It is standing on solid ground either way, and the route is
+        /// searched again from wherever that is.
         /// </remarks>
         private bool LandedWhereItShould(Vector3d position)
         {
@@ -406,6 +426,25 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
 
         private double Along(Vector3d offset)
             => offset.X * _heading.X + offset.Z * _heading.Z;
+
+        /// <summary>
+        /// Where the player would come to a stop if it let go now: drag, and
+        /// on the ground friction, take the same share of the speed every tick,
+        /// so what is left to cover is a geometric series.
+        /// </summary>
+        private static Vector3d Coast(MovementState state)
+        {
+            var kept = state.OnGround
+                ? PlayerPhysics.HorizontalDrag * PlayerPhysics.GroundFriction
+                : PlayerPhysics.HorizontalDrag;
+
+            var carry = kept / (1 - kept);
+
+            return new Vector3d(
+                state.Position.X + state.Velocity.X * carry,
+                state.Position.Y,
+                state.Position.Z + state.Velocity.Z * carry);
+        }
 
         /// <summary>The single block step in a direction, straight or diagonal.</summary>
         private static Vector3i Step(Vector3d heading)

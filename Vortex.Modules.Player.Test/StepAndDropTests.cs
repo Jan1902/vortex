@@ -1,3 +1,4 @@
+using System.Globalization;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
@@ -89,6 +90,43 @@ public class StepAndDropTests
             // near as it can be promised.
             Assert.InRange(ended.Position.X, Ledge, Ledge + 2);
         }
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void DropsOntoASingleBlockWithNothingBeyondIt(int height)
+    {
+        var floor = 64 - height;
+
+        // From a few blocks back, arriving at a walk, and from anywhere between
+        // the middle of the last block and the lip.
+        var starts = Enumerable.Range(0, 60).Select(i => Ledge - 3.5 + i * 0.055);
+        var failures = new List<string>();
+
+        foreach (var x in starts)
+        {
+            // One block to come down on, and past it a long way down.
+            var world = new Terrain(column => column < Ledge ? 63 : column == Ledge ? 63 - height : 40);
+            var controller = Ticking.Controller();
+
+            var start = Ticking.At(new Vector3d(x, 64, 0.5));
+            controller.Tick(start);
+
+            var dropped = controller.DropTo(new Vector3d(Ledge + 0.5, floor, 0.5));
+            var ended = Ticking.Walk(controller, world, start, dropped);
+
+            // Past the block is a long way down, so landing on it is not enough:
+            // it has to be on it, not hanging off the far side of it.
+            if (dropped.Result != MovementResult.Arrived
+                || Math.Abs(ended.Position.Y - floor) > 0.001
+                || ended.Position.X is < Ledge or > Ledge + 1)
+                failures.Add(string.Create(CultureInfo.InvariantCulture,
+                    $"from {x:F2}: {dropped.Result} at {ended.Position.X:F2} {ended.Position.Y:F2}"));
+        }
+
+        Assert.Empty(failures);
     }
 
     [Fact]

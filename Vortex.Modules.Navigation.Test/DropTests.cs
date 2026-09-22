@@ -8,9 +8,8 @@ namespace Vortex.Modules.Navigation.Test;
 /// Which drops the search is willing to plan.
 /// </summary>
 /// <remarks>
-/// A fall cannot be stopped once it is going, and a player that walks off an
-/// edge may come down one block further on than it aimed. The movement accepts
-/// that, so the search only plans a drop where it is safe.
+/// The movement lets go before the edge and brakes in the air, so it lands on
+/// the block it aims at. Whatever lies past that block does not matter.
 /// </remarks>
 public class DropTests
 {
@@ -18,11 +17,14 @@ public class DropTests
     private static readonly Vector3i _pillarTop = new(5, 62, 0);
 
     [Fact]
-    public void WillNotDropOntoAPillarWithNothingBeyondIt()
+    public void DropsOntoAPillarWithNothingBeyondIt()
     {
-        // One block of ground two below, and past it nothing at all. Aiming at
-        // the pillar is fine; coming down a block further on is a long way down.
-        Assert.Null(Find(Ledge()));
+        // One block of ground two below, and past it nothing at all -- the way
+        // down from the top of a jump and run.
+        var route = Find(Ledge());
+
+        Assert.NotNull(route);
+        Assert.Contains(route.Moves, move => move is Drop);
     }
 
     [Fact]
