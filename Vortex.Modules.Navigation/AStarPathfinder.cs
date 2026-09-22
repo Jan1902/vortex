@@ -152,6 +152,17 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// <summary>How many of <see cref="_directions"/> run along an axis.</summary>
     private const int StraightDirections = 4;
 
+    /// <summary>
+    /// Where a jump can land that is neither along an axis nor straight across
+    /// a corner, such as two blocks on and one to the side: every such offset
+    /// within the furthest reach there is.
+    /// </summary>
+    /// <remarks>
+    /// Headings for these carry on after <see cref="_directions"/>, so that
+    /// turning into or out of one costs a turn like any other change of way.
+    /// </remarks>
+    private static readonly Vector3i[] _offAxisJumps = OffAxisJumpOffsets().ToArray();
+
     public Route? FindRoute(Vector3d start, Vector3i goal, MovementCapabilities? capabilities = null)
         => Search(StandingBlockFor(start), goal, capabilities);
 
@@ -313,6 +324,123 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             if (allowed.JumpGaps && JumpAcross(from, direction, allowed.Sprint) is { } leap)
                 yield return (leap.Move, leap.Cost, heading);
         }
+
+        if (!allowed.JumpGaps || !allowed.Diagonals)
+            yield break;
+
+        for (var i = 0; i < _offAxisJumps.Length; i++)
+            if (JumpOffAxis(from, _offAxisJumps[i], allowed.Sprint) is { } leap)
+                yield return (leap.Move, leap.Cost, _directions.Length + i);
+    }
+
+    private static IEnumerable<Vector3i> OffAxisJumpOffsets()
+    {
+        var reach = (int)Math.Floor(JumpReach.Furthest(sprinting: true, JumpReach.LowestLanding));
+
+        for (var dx = -reach; dx <= reach; dx++)
+            for (var dz = -reach; dz <= reach; dz++)
+                if (dx != 0 && dz != 0 && Math.Abs(dx) != Math.Abs(dz) && dx * dx + dz * dz <= reach * reach)
+                    yield return new Vector3i(dx, 0, dz);
+    }
+
+    /// <summary>
+    /// A jump to a block that lies off every one of the eight directions, such
+    /// as two on and one to the side, or null if it cannot be made.
+    /// </summary>
+    /// <remarks>
+    /// Judged the way the player flies it: in a straight line from the middle
+    /// of the block to the middle of the landing, so everything the player's
+    /// box sweeps over on that line has to be clear, and the reach is the
+    /// distance between the two middles. As with the other jumps, the highest
+    /// landing wins and walking is preferred to sprinting wherever both reach.
+    /// </remarks>
+    private (Move Move, double Cost)? JumpOffAxis(Vector3i from, Vector3i offset, bool maySprint)
+    {
+        if (!IsPassable(Above(Above(from))))
+            return null;
+
+        var distance = Math.Sqrt(offset.X * offset.X + offset.Z * offset.Z);
+        var gap = Math.Max(Math.Abs(offset.X), Math.Abs(offset.Z)) - 1;
+
+        for (var rise = JumpReach.HighestLanding; rise >= JumpReach.LowestLanding; rise--)
+        {
+            var sprinting = distance > JumpReach.Furthest(sprinting: false, rise);
+
+            if (sprinting && (!maySprint || distance > JumpReach.Furthest(sprinting: true, rise)))
+                continue;
+
+            var landing = new Vector3i(from.X + offset.X, from.Y + rise, from.Z + offset.Z);
+
+            if (!CanStandAt(landing) || !CanFlyTo(from, landing))
+                continue;
+
+            return sprinting
+                ? (new JumpGap(landing, gap, Sprinting: true), SprintJumpCost + gap * JumpBlockCost)
+                : (new JumpGap(landing, gap), JumpGapCost + gap * JumpBlockCost);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Whether the straight flight from one block to a landing off to the side
+    /// actually crosses a gap, and is clear all the way.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The gap comes first, because it is cheap to ask and on open ground the
+    /// answer is always no: where every block under the line could be walked
+    /// on, there is nothing to jump over and walking gets there anyway.
+    /// </para>
+    /// <para>
+    /// Then every column the player's box passes over has to be clear at body
+    /// height and the block above, as for any jump.
+    /// </para>
+    /// </remarks>
+    private bool CanFlyTo(Vector3i from, Vector3i landing)
+    {
+        const int samples = 20;
+
+        var start = new Vector3d(from.X + 0.5, from.Y, from.Z + 0.5);
+        var end = new Vector3d(landing.X + 0.5, from.Y, landing.Z + 0.5);
+        var landingColumn = new Vector2i(landing.X, landing.Z);
+
+        Vector3d Along(int sample)
+            => start + (end - start) * ((double)sample / samples);
+
+        var underLine = Enumerable.Range(1, samples - 1)
+            .Select(sample => Along(sample).ToBlockPosition())
+            .Where(block => block != from && new Vector2i(block.X, block.Z) != landingColumn)
+            .Distinct();
+
+        if (underLine.All(CanStandAt))
+            return false;
+
+        var passedOver = new HashSet<Vector2i>();
+
+        for (var sample = 0; sample <= samples; sample++)
+        {
+            foreach (var column in PlayerHitbox.ColumnsUnder(Along(sample)))
+            {
+                if (!passedOver.Add(column))
+                    continue;
+
+                var over = new Vector3i(column.X, from.Y, column.Z);
+
+                if (over == from)
+                    continue;
+
+                // Jumping up onto a landing, its column at take-off height is
+                // the very block landed on.
+                if (column == landingColumn && landing.Y > from.Y)
+                    continue;
+
+                if (IsBlocked(over) || !IsPassable(Above(Above(over))))
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

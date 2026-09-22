@@ -273,9 +273,18 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
             // air the little control there is then brakes a fall that would
             // carry it past the block, instead of pushing on towards a middle it
             // has already overshot in all but position.
-            var aim = movement.Kind == MovementKind.Drop
-                ? Coast(state)
-                : state.Position;
+            //
+            // A sprinting jump in the air goes by where it would come down. One
+            // at the limit of its reach is still short of the landing there, so
+            // it pushes all the way as it always did; one with reach to spare --
+            // across a corner, say, two on and one to the side -- lets go or
+            // brakes instead of sailing over.
+            var aim = movement.Kind switch
+            {
+                MovementKind.Drop => Coast(state),
+                MovementKind.Jump when !state.OnGround && movement.Mode == MovementMode.Sprint => Landing(state),
+                _ => state.Position
+            };
 
             var toTarget = Normalize(new Vector3d(
                 movement.Destination.X - aim.X, 0, movement.Destination.Z - aim.Z));
@@ -385,17 +394,26 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
         /// Whether the player came down on the block it was aimed at.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// Standing on it is what counts, not having the middle over it: a jump
+        /// up onto a lone block can come down with the player's middle still over
+        /// the gap and its feet on the block's near edge. The route is searched
+        /// again from there, and the search knows a player on an edge for where
+        /// it stands.
+        /// </para>
+        /// <para>
         /// A drop may also end one block further on, at the same height, where
         /// the ground carries on past the landing and the player has drifted onto
         /// it. It is standing on solid ground either way, and the route is
         /// searched again from wherever that is.
+        /// </para>
         /// </remarks>
         private bool LandedWhereItShould(Vector3d position)
         {
             var landed = position.ToBlockPosition();
             var aimed = movement.Destination.ToBlockPosition();
 
-            if (landed == aimed)
+            if (landed.Y == aimed.Y && PlayerHitbox.ColumnsUnder(position).Contains(new Vector2i(aimed.X, aimed.Z)))
                 return true;
 
             return movement.Kind == MovementKind.Drop && landed == aimed + Step(_heading);
@@ -426,6 +444,32 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
 
         private double Along(Vector3d offset)
             => offset.X * _heading.X + offset.Z * _heading.Z;
+
+        /// <summary>
+        /// Where a player in the air would come down on the landing's height if
+        /// it let go now, following the same drag and gravity as the physics.
+        /// </summary>
+        private Vector3d Landing(MovementState state)
+        {
+            var (x, y, z) = (state.Position.X, state.Position.Y, state.Position.Z);
+            var (vx, vy, vz) = (state.Velocity.X, state.Velocity.Y, state.Velocity.Z);
+
+            for (var tick = 0; tick < Timeout; tick++)
+            {
+                vx *= PlayerPhysics.HorizontalDrag;
+                vz *= PlayerPhysics.HorizontalDrag;
+                vy = (vy - PlayerPhysics.Gravity) * PlayerPhysics.VerticalDrag;
+
+                x += vx;
+                y += vy;
+                z += vz;
+
+                if (vy < 0 && y <= movement.Destination.Y)
+                    break;
+            }
+
+            return new Vector3d(x, y, z);
+        }
 
         /// <summary>
         /// Where the player would come to a stop if it let go now: drag, and
