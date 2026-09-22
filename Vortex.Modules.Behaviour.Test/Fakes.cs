@@ -96,8 +96,13 @@ internal class FakeInventory : IInventoryManager
     public Task DropAsync(int slot, bool wholeStack = true) => ClickAsync(slot, wholeStack ? 1 : 0, ClickMode.Throw);
     public Task CloseContainerAsync() => Task.CompletedTask;
 
-    public int Count(Item item) => 0;
-    public IReadOnlyList<(int Slot, ItemStack Stack)> Find(Func<ItemStack, bool> match) => [];
+    public int Count(Item item) => Find(stack => stack.Item == item).Sum(found => found.Stack.Count);
+
+    public IReadOnlyList<(int Slot, ItemStack Stack)> Find(Func<ItemStack, bool> match)
+        => PlayerSlots.Storage
+            .Where(slot => _slots[slot] is { } stack && match(stack))
+            .Select(slot => (slot, _slots[slot]!))
+            .ToList();
     public int SpaceFor(Item item) => Full.Contains(item) ? 0 : 64;
 
     public Task SelectHotbarSlotAsync(int slot)

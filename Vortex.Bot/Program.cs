@@ -149,6 +149,23 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(result.ToString());
     }
 
+    if (parts[1] == "place")
+    {
+        if (parts.Length < 3 || Items.Parse(parts[2]) is not { } item || Coordinates.ParseBlock(parts, 3) is not { } target)
+        {
+            await client.SendChatMessage("What and where? jeff place <item> <x> <y> <z>");
+            return;
+        }
+
+        var task = client.Brain.CreateTask<PlaceBlockTask>(item, target);
+
+        await client.SendChatMessage($"On it: {task.Description}");
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage(result.ToString());
+    }
+
     if (parts[1] == "use")
     {
         if (Coordinates.ParseBlock(parts, 2) is not { } target)
