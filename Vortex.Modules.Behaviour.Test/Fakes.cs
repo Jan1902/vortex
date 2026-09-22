@@ -70,6 +70,32 @@ internal class FakeInventory : IInventoryManager
     /// <summary>Puts something into a hotbar slot.</summary>
     public void Hotbar(int slot, Item item) => _slots[PlayerSlots.Hotbar(slot)] = new ItemStack(item, 1);
 
+    /// <summary>Puts something into a slot of the player window.</summary>
+    public void Put(int slot, Item item, int count = 1) => _slots[slot] = new ItemStack(item, count);
+
+    /// <summary>Every click made, as slot and mode.</summary>
+    public List<(int Slot, int Button, ClickMode Mode)> Clicks { get; } = [];
+
+    public ContainerWindow ActiveWindow => Player;
+
+    public int? ToActiveWindowSlot(int playerSlot) => playerSlot;
+
+    public Task ClickAsync(int slot, int button, ClickMode mode)
+    {
+        Clicks.Add((slot, button, mode));
+
+        if (mode == ClickMode.Swap)
+            (_slots[slot], _slots[PlayerSlots.Hotbar(button)]) = (_slots[PlayerSlots.Hotbar(button)], _slots[slot]);
+
+        return Task.CompletedTask;
+    }
+
+    public Task PickUpAsync(int slot) => ClickAsync(slot, 0, ClickMode.PickUp);
+    public Task QuickMoveAsync(int slot) => ClickAsync(slot, 0, ClickMode.QuickMove);
+    public Task SwapWithHotbarAsync(int slot, int hotbarSlot) => ClickAsync(slot, hotbarSlot, ClickMode.Swap);
+    public Task DropAsync(int slot, bool wholeStack = true) => ClickAsync(slot, wholeStack ? 1 : 0, ClickMode.Throw);
+    public Task CloseContainerAsync() => Task.CompletedTask;
+
     public int Count(Item item) => 0;
     public IReadOnlyList<(int Slot, ItemStack Stack)> Find(Func<ItemStack, bool> match) => [];
     public int SpaceFor(Item item) => Full.Contains(item) ? 0 : 64;

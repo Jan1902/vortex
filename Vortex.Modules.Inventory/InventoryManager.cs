@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Vortex.Data;
+using Vortex.Framework.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 
@@ -14,14 +15,31 @@ namespace Vortex.Modules.Inventory;
 /// and an open container consistent with each other, since one update can
 /// change both.
 /// </remarks>
-internal class InventoryManager(INetworkingManager networking) : IInventoryManager
+internal class InventoryManager(INetworkingManager networking, IEventBus eventBus) : IInventoryManager
 {
+    /// <summary>
+    /// How long a click waits for the server to report what it changed. A click
+    /// that changes nothing gets no answer, so this is kept short.
+    /// </summary>
+    private static readonly TimeSpan ClickAnswerWait = TimeSpan.FromMilliseconds(300);
+
+    /// <summary>
+    /// How long to keep listening once the first change came in: the server
+    /// sends everything a click changed within the same tick.
+    /// </summary>
+    private static readonly TimeSpan ClickSettle = TimeSpan.FromMilliseconds(60);
+
+    private static readonly TimeSpan Poll = TimeSpan.FromMilliseconds(10);
+
     private readonly object _lock = new();
 
     private ContainerWindow _player = Empty(ContainerWindow.PlayerWindowId, null, PlayerSlots.Count);
     private ContainerWindow? _container;
     private ItemStack? _cursor;
     private int _selectedHotbarSlot;
+
+    /// <summary>Counts every change to a window, so a click can tell when its answer arrived.</summary>
+    private int _version;
 
     public ContainerWindow Player { get { lock (_lock) return _player; } }
 
@@ -76,6 +94,7 @@ internal class InventoryManager(INetworkingManager networking) : IInventoryManag
         lock (_lock)
         {
             _cursor = cursor;
+            _version++;
 
             if (windowId == ContainerWindow.PlayerWindowId)
             {
@@ -108,6 +127,8 @@ internal class InventoryManager(INetworkingManager networking) : IInventoryManag
     {
         lock (_lock)
         {
+            _version++;
+
             if (windowId == ContainerWindow.PlayerWindowId)
             {
                 if (slot < 0 || slot >= _player.Slots.Length)
@@ -154,6 +175,7 @@ internal class InventoryManager(INetworkingManager networking) : IInventoryManag
 
         lock (_lock)
         {
+            _version++;
             _player = _player with { Slots = _player.Slots.SetItem(slot.Value, stack) };
 
             return _player;
@@ -163,7 +185,10 @@ internal class InventoryManager(INetworkingManager networking) : IInventoryManag
     public void SetCursor(ItemStack? stack)
     {
         lock (_lock)
+        {
+            _version++;
             _cursor = stack;
+        }
     }
 
     /// <returns>The window whose property changed, or <c>null</c> if it is not open.</returns>
@@ -202,6 +227,63 @@ internal class InventoryManager(INetworkingManager networking) : IInventoryManag
 
             return true;
         }
+    }
+
+    public ContainerWindow ActiveWindow { get { lock (_lock) return _container ?? _player; } }
+
+    public int? ToActiveWindowSlot(int playerSlot)
+    {
+        lock (_lock)
+        {
+            if (_container is null)
+                return playerSlot;
+
+            if (playerSlot < PlayerSlots.MainStart || playerSlot >= PlayerSlots.Offhand)
+                return null;
+
+            return _container.ContainerSize + playerSlot - PlayerSlots.MainStart;
+        }
+    }
+
+    public async Task ClickAsync(int slot, int button, ClickMode mode)
+    {
+        var window = ActiveWindow;
+        var version = Volatile.Read(ref _version);
+
+        // No expectations sent: the server then reports every slot the click
+        // changed, so nothing of the game's click rules has to be copied here.
+        await networking.SendPacket(new ContainerClick((byte)window.Id, window.StateId, (short)slot, (byte)button, mode, [], Carried: null));
+
+        var deadline = DateTime.UtcNow + ClickAnswerWait;
+
+        while (Volatile.Read(ref _version) == version && DateTime.UtcNow < deadline)
+            await Task.Delay(Poll);
+
+        if (Volatile.Read(ref _version) != version)
+            await Task.Delay(ClickSettle);
+    }
+
+    public Task PickUpAsync(int slot)
+        => ClickAsync(slot, 0, ClickMode.PickUp);
+
+    public Task QuickMoveAsync(int slot)
+        => ClickAsync(slot, 0, ClickMode.QuickMove);
+
+    public Task SwapWithHotbarAsync(int slot, int hotbarSlot)
+        => ClickAsync(slot, hotbarSlot, ClickMode.Swap);
+
+    public Task DropAsync(int slot, bool wholeStack = true)
+        => ClickAsync(slot, wholeStack ? 1 : 0, ClickMode.Throw);
+
+    public async Task CloseContainerAsync()
+    {
+        if (OpenContainer is not { } container)
+            return;
+
+        await networking.SendPacket(new ServerBoundContainerClose((byte)container.Id));
+
+        if (Close(container.Id))
+            await eventBus.PublishAsync(new ContainerClosedEvent(container.Id));
     }
 
     public async Task SelectHotbarSlotAsync(int slot)

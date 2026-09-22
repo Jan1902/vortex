@@ -2,6 +2,7 @@
 using Vortex.Data;
 using Vortex.Framework;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks;
 using Vortex.Modules.Entities.Abstraction;
 using Vortex.Modules.Navigation.Abstraction;
@@ -165,6 +166,57 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(result.ToString());
     }
 
+    if (parts[1] == "chest")
+    {
+        if (Coordinates.ParseBlock(parts, 2) is not { } target)
+        {
+            await client.SendChatMessage("Which block? jeff chest <x> <y> <z>");
+            return;
+        }
+
+        var result = await client.Brain.RunAsync(client.Brain.CreateTask<OpenContainerTask>(target));
+
+        if (result.IsFailure || client.Inventory.OpenContainer is not { } container)
+        {
+            await client.SendChatMessage(result.ToString());
+            return;
+        }
+
+        var contents = container.Slots.Take(container.ContainerSize)
+            .OfType<ItemStack>()
+            .GroupBy(stack => stack.Item)
+            .Select(group => $"{group.Sum(stack => stack.Count)}x {group.Key}")
+            .ToList();
+
+        await client.SendChatMessage($"{container.Type}: " + (contents.Count == 0 ? "empty" : string.Join(", ", contents)));
+    }
+
+    if (parts[1] == "take" || parts[1] == "store")
+    {
+        if (parts.Length < 3 || Items.Parse(parts[2]) is not { } item)
+        {
+            await client.SendChatMessage($"What? jeff {parts[1]} <item>" + (parts[1] == "take" ? " [count]" : ""));
+            return;
+        }
+
+        var amount = parts.Length > 3 && int.TryParse(parts[3], out var given) ? given : 64;
+
+        BotTask task = parts[1] == "take"
+            ? client.Brain.CreateTask<TakeItemsTask>(item, client.Inventory.Count(item) + amount)
+            : client.Brain.CreateTask<StoreItemsTask>(item);
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage($"{task.Description}: {result}");
+    }
+
+    if (parts[1] == "close")
+    {
+        await client.Inventory.CloseContainerAsync();
+
+        await client.SendChatMessage("Closed");
+    }
+
     if (parts[1] == "inv")
     {
         var inventory = client.Inventory;
@@ -284,6 +336,22 @@ string Describe(Entity entity)
 // Keep the bot alive until the process is stopped. A spin loop here would burn
 // a core and keep the process alive after its parent is gone.
 await Task.Delay(Timeout.Infinite);
+
+/// <summary>
+/// Turns item names typed in chat, as the game writes them, into items.
+/// </summary>
+static class Items
+{
+    /// <summary>Reads <c>oak_log</c> or <c>minecraft:oak_log</c> as <see cref="Item.OakLog"/>.</summary>
+    public static Item? Parse(string name)
+    {
+        var pascal = string.Concat(name.Replace("minecraft:", "")
+            .Split('_', StringSplitOptions.RemoveEmptyEntries)
+            .Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
+
+        return Enum.TryParse<Item>(pascal, ignoreCase: true, out var item) ? item : null;
+    }
+}
 
 /// <summary>
 /// Turns what someone typed in chat into the block coordinates the bot works in.

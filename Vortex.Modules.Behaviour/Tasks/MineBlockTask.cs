@@ -25,9 +25,6 @@ public class MineBlockTask(
     Func<Vector3i, WithinReachTask> withinReach,
     ILogger<MineBlockTask> logger) : BotTask
 {
-    /// <summary>Where the player's eyes sit above its feet.</summary>
-    private const double EyeHeight = 1.62;
-
     private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(50);
 
     /// <summary>How long the block has to change after the server confirmed breaking it.</summary>
@@ -51,17 +48,12 @@ public class MineBlockTask(
 
         var (slot, tool) = ToolChoice.Best(state.Block, inventory);
 
-        if (slot != inventory.SelectedHotbarSlot)
-            await inventory.SelectHotbarSlotAsync(slot);
+        await Hold.InMainHandAsync(inventory, slot);
 
         if (Mining.BreakTicks(state.Block, tool, onGround: player.IsOnGround) is not { } ticks)
             return TaskResult.Failed($"{state.Block} cannot be broken");
 
-        var eyes = player.Position + new Vector3d(0, EyeHeight, 0);
-        var face = BlockFaces.Facing(target, eyes);
-
-        player.LookAt(BlockFaces.Center(target, face));
-        await Task.Delay(Tick, cancellationToken);
+        var face = await Aim.AtBlockAsync(player, target, cancellationToken);
 
         logger.LogDebug("Breaking {Block} at {Target} with {Tool}, {Ticks} ticks", state.Block, target, tool?.ToString() ?? "the bare hand", ticks);
 

@@ -7,12 +7,15 @@ namespace Vortex.Modules.Inventory.Test;
 
 public class InventoryTrackingTests
 {
-    private readonly InventoryManager _inventory = new(new NoNetworking());
+    private readonly InventoryManager _inventory;
     private readonly RecordingEventBus _events = new();
     private readonly InventoryPacketHandler _handler;
 
     public InventoryTrackingTests()
-        => _handler = new InventoryPacketHandler(NullLogger<InventoryPacketHandler>.Instance, _events, _inventory);
+    {
+        _inventory = new InventoryManager(new NoNetworking(), _events);
+        _handler = new InventoryPacketHandler(NullLogger<InventoryPacketHandler>.Instance, _events, _inventory);
+    }
 
     [Fact]
     public async Task TakesInTheWholeInventory()

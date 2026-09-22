@@ -24,15 +24,6 @@ public class UseBlockTask(
     Func<Vector3i, WithinReachTask> withinReach,
     ILogger<UseBlockTask> logger) : BotTask
 {
-    /// <summary>Where the player's eyes sit above its feet.</summary>
-    private const double EyeHeight = 1.62;
-
-    /// <summary>
-    /// A tick, so the new look direction goes out with the next movement packet
-    /// before the click does.
-    /// </summary>
-    private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(50);
-
     private bool _used;
 
     public override string Description
@@ -48,11 +39,7 @@ public class UseBlockTask(
 
     public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
     {
-        var eyes = player.Position + new Vector3d(0, EyeHeight, 0);
-        var face = BlockFaces.Facing(target, eyes);
-
-        player.LookAt(BlockFaces.Center(target, face));
-        await Task.Delay(Tick, cancellationToken);
+        var face = await Aim.AtBlockAsync(player, target, cancellationToken);
 
         logger.LogDebug("Using the {Face} side of {Target}", face, target);
 

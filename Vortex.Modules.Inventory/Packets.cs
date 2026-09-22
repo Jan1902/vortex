@@ -1,4 +1,5 @@
 using Vortex.Data;
+using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Shared;
 
@@ -41,6 +42,32 @@ public record OpenScreen(int WindowId, Menu Type, NbtTag Title) : PacketBase;
 /// <summary>The server closed a container.</summary>
 [AutoSerializedPacket(PacketIds.Play.ClientBound.ContainerClose)]
 public record ClientBoundContainerClose(byte WindowId) : PacketBase;
+
+/// <summary>
+/// Clicks a slot of a window.
+/// </summary>
+/// <param name="ChangedSlots">
+/// What the client expects the click to change. Left empty, the server sends
+/// every slot the click did change, which is how the result comes back.
+/// </param>
+/// <param name="Carried">What the client expects on the cursor afterwards.</param>
+[AutoSerializedPacket(PacketIds.Play.ServerBound.ContainerClick, packetDirection: PacketDirection.ServerBound)]
+public record ContainerClick(
+    byte WindowId,
+    int StateId,
+    short Slot,
+    byte Button,
+    ClickMode Mode,
+    ChangedSlot[] ChangedSlots,
+    ItemStack? Carried) : PacketBase;
+
+/// <summary>A slot as the client expects it after a click.</summary>
+[PacketModel]
+public record ChangedSlot(short Slot, ItemStack? Item);
+
+/// <summary>Closes a container.</summary>
+[AutoSerializedPacket(PacketIds.Play.ServerBound.ContainerClose, packetDirection: PacketDirection.ServerBound)]
+public record ServerBoundContainerClose(byte WindowId) : PacketBase;
 
 /// <summary>Selects a hotbar slot.</summary>
 [AutoSerializedPacket(PacketIds.Play.ServerBound.SetCarriedItem, packetDirection: PacketDirection.ServerBound)]
