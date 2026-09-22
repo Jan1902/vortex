@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Behaviour.Tasks.Blocks;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
@@ -19,7 +20,7 @@ internal static class Routes
 
     /// <summary>What routes may ask of the player.</summary>
     public static MovementCapabilities Capabilities(Bot bot)
-        => MovementCapabilities.Athletic;
+        => bot.MayDig ? MovementCapabilities.Digging : MovementCapabilities.Athletic;
 
     /// <summary>
     /// Walks until <paramref name="arrived"/> holds, searching the route again
@@ -64,6 +65,21 @@ internal static class Routes
         };
 
         bot.Logger.LogDebug("{Remaining} move(s) left, {Move} to {X} {Y} {Z}", route.Moves.Count, move?.GetType().Name ?? "settle", to.X, to.Y, to.Z);
+
+        // A way that goes through blocks is walked once they are gone. Breaking
+        // them is a task of its own; the next round then finds a plain way.
+        if (move is MineThrough through)
+        {
+            foreach (var block in through.Blocking)
+            {
+                var broken = await bot.Run(new MineBlockTask(block));
+
+                if (broken.IsFailure)
+                    return broken;
+            }
+
+            return TaskResult.Success();
+        }
 
         var centre = new Vector3d(to.X + 0.5, to.Y, to.Z + 0.5);
         var movement = bot.Movement;

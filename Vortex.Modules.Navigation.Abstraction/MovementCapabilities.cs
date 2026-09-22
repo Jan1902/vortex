@@ -30,11 +30,15 @@ namespace Vortex.Modules.Navigation.Abstraction;
 /// walking cannot, because the faster the take-off the less say there is in
 /// where it comes down.
 /// </param>
-public record MovementCapabilities(bool JumpGaps = false, bool Diagonals = false, bool Sprint = false)
+/// <param name="Dig">Whether blocks in the way may be broken to get through.</param>
+public record MovementCapabilities(bool JumpGaps = false, bool Diagonals = false, bool Sprint = false, bool Dig = false)
 {
     /// <summary>Walking only: no gap it cannot step across, nothing touched.</summary>
     public static MovementCapabilities Walking { get; } = new();
 
     /// <summary>Walking and jumping, the way a player crossing rough ground moves.</summary>
     public static MovementCapabilities Athletic { get; } = new(JumpGaps: true, Diagonals: true, Sprint: true);
+
+    /// <summary>Athletic, and willing to break through what is in the way.</summary>
+    public static MovementCapabilities Digging { get; } = Athletic with { Dig = true };
 }

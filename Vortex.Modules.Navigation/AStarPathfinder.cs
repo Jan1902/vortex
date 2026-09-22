@@ -1,3 +1,4 @@
+using Vortex.Data;
 using Microsoft.Extensions.Logging;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Modules.World.Abstraction;
@@ -91,6 +92,14 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// walked is taking a risk for nothing.
     /// </remarks>
     private const double SprintJumpCost = 18.0;
+
+    /// <summary>
+    /// What breaking one block on the way costs, in ticks. A rough average
+    /// rather than a real mining time: how long it takes depends on the tool in
+    /// hand, which is not the search's business. High enough that the bot walks
+    /// a good way round rather than tunnel through.
+    /// </summary>
+    private const double MineCost = 40.0;
 
     /// <summary>Charged per block of gap, so the shortest jump that works wins.</summary>
     private const double JumpBlockCost = 2.0;
@@ -416,6 +425,11 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
                 if (!diagonal && CanStandAt(up) && IsPassable(Above(Above(from))))
                     yield return (new StepUp(up), StepUpCost, heading);
 
+                // Or go through it, if breaking blocks is allowed and there is
+                // floor on the other side to come out onto.
+                else if (!diagonal && allowed.Dig && Tunnel(side) is { } tunnel)
+                    yield return (tunnel.Move, tunnel.Cost * length, heading);
+
                 continue;
             }
 
@@ -430,6 +444,10 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
                 yield return (leap.Move, leap.Cost, heading);
         }
 
+        // Straight down, by taking the floor out from under the player.
+        if (allowed.Dig && DigDown(from) is { } down)
+            yield return (down.Move, down.Cost, NoDirection);
+
         if (!allowed.JumpGaps || !allowed.Diagonals)
             yield break;
 
@@ -443,6 +461,71 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             if (JumpOffAxis(from, offset, allowed.Sprint) is { } leap)
                 yield return (leap.Move, leap.Cost, _directions.Length + i);
         }
+    }
+
+    /// <summary>
+    /// Breaking through what stands in the way at body height, to walk into
+    /// where it was.
+    /// </summary>
+    private (Move Move, double Cost)? Tunnel(Vector3i side)
+    {
+        // Something has to hold the player up over there.
+        if (IsPassable(Below(side)))
+            return null;
+
+        var blocking = new List<Vector3i>();
+
+        foreach (var position in new[] { Above(side), side })
+        {
+            if (IsPassable(position))
+                continue;
+
+            if (!CanBreak(position))
+                return null;
+
+            blocking.Add(position);
+        }
+
+        return blocking.Count == 0
+            ? null
+            : (new MineThrough(side, blocking), WalkCost + blocking.Count * MineCost);
+    }
+
+    /// <summary>
+    /// Breaking the floor to step down into where it was. One block at a time:
+    /// what is under it has to hold the player up.
+    /// </summary>
+    private (Move Move, double Cost)? DigDown(Vector3i from)
+    {
+        var floor = Below(from);
+
+        if (IsPassable(floor) || IsPassable(Below(floor)) || !CanBreak(floor) || !IsSafeAt(floor))
+            return null;
+
+        return (new MineThrough(floor, [floor]), DropCost + MineCost);
+    }
+
+    /// <summary>
+    /// Whether a block may be broken to get through.
+    /// </summary>
+    /// <remarks>
+    /// Bedrock and the like cannot be broken at all. Next to a liquid is a bad
+    /// idea, because what comes through the hole does not stop, and so is
+    /// underneath sand or gravel, which falls into the hole and fills it again.
+    /// </remarks>
+    private bool CanBreak(Vector3i position)
+    {
+        if (world.GetBlock(position) is not { } state || state.Block.Hardness() < 0)
+            return false;
+
+        if (BlockHazard.IsHarmful(state) || BlockHazard.Drowns(state))
+            return false;
+
+        foreach (var side in new[] { Above(position), Below(position), Offset(position, new Vector3i(1, 0, 0)), Offset(position, new Vector3i(-1, 0, 0)), Offset(position, new Vector3i(0, 0, 1)), Offset(position, new Vector3i(0, 0, -1)) })
+            if (world.GetBlock(side) is { } neighbour && (BlockHazard.Drowns(neighbour) || BlockHazard.IsHarmful(neighbour)))
+                return false;
+
+        return world.GetBlock(Above(position))?.Block is not (Block.Sand or Block.RedSand or Block.Gravel);
     }
 
     private static IEnumerable<(Vector3i Offset, int Exit)> OffAxisJumpOffsets()
