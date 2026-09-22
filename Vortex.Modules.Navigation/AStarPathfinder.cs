@@ -158,10 +158,20 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// within the furthest reach there is.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Headings for these carry on after <see cref="_directions"/>, so that
     /// turning into or out of one costs a turn like any other change of way.
+    /// </para>
+    /// <para>
+    /// Each comes with the neighbour its line leaves the block through -- always
+    /// one along an axis, since the line never runs through a corner. A jump
+    /// only makes sense where that neighbour is a gap; where it is floor, the
+    /// player can walk on and jump from there. Ruling a jump out by that one
+    /// block, which the search looks at anyway, is what keeps these from costing
+    /// anything on ground where there is nothing to jump over.
+    /// </para>
     /// </remarks>
-    private static readonly Vector3i[] _offAxisJumps = OffAxisJumpOffsets().ToArray();
+    private static readonly (Vector3i Offset, int Exit)[] _offAxisJumps = OffAxisJumpOffsets().ToArray();
 
     public Route? FindRoute(Vector3d start, Vector3i goal, MovementCapabilities? capabilities = null)
         => Search(StandingBlockFor(start), goal, capabilities);
@@ -280,6 +290,9 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     {
         var headings = allowed.Diagonals ? _directions.Length : StraightDirections;
 
+        // Which of the neighbours along the axes are gaps, one bit per heading.
+        var gaps = 0;
+
         for (var heading = 0; heading < headings; heading++)
         {
             var direction = _directions[heading];
@@ -316,6 +329,8 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
                 continue;
             }
 
+            gaps |= 1 << heading;
+
             // The way is open but there is no floor: fall until something
             // catches the player, and give up if that is too far down.
             foreach (var drop in DropsFrom(side))
@@ -329,18 +344,35 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             yield break;
 
         for (var i = 0; i < _offAxisJumps.Length; i++)
-            if (JumpOffAxis(from, _offAxisJumps[i], allowed.Sprint) is { } leap)
+        {
+            var (offset, exit) = _offAxisJumps[i];
+
+            if ((gaps & (1 << exit)) == 0)
+                continue;
+
+            if (JumpOffAxis(from, offset, allowed.Sprint) is { } leap)
                 yield return (leap.Move, leap.Cost, _directions.Length + i);
+        }
     }
 
-    private static IEnumerable<Vector3i> OffAxisJumpOffsets()
+    private static IEnumerable<(Vector3i Offset, int Exit)> OffAxisJumpOffsets()
     {
         var reach = (int)Math.Floor(JumpReach.Furthest(sprinting: true, JumpReach.LowestLanding));
 
         for (var dx = -reach; dx <= reach; dx++)
             for (var dz = -reach; dz <= reach; dz++)
-                if (dx != 0 && dz != 0 && Math.Abs(dx) != Math.Abs(dz) && dx * dx + dz * dz <= reach * reach)
-                    yield return new Vector3i(dx, 0, dz);
+            {
+                if (dx == 0 || dz == 0 || Math.Abs(dx) == Math.Abs(dz) || dx * dx + dz * dz > reach * reach)
+                    continue;
+
+                // Out through the side the line meets first: the one across the
+                // axis it covers more of.
+                var exit = Math.Abs(dx) > Math.Abs(dz)
+                    ? new Vector3i(Math.Sign(dx), 0, 0)
+                    : new Vector3i(0, 0, Math.Sign(dz));
+
+                yield return (new Vector3i(dx, 0, dz), Array.IndexOf(_directions, exit));
+            }
     }
 
     /// <summary>
