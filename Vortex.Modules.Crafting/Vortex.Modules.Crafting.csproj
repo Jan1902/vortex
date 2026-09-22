@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="../ProjectConfiguration.Base.csproj" />
+    <Import Project="../ProjectConfiguration.Module.csproj" />
+
+    <ItemGroup>
+      <ProjectReference Include="..\Vortex.Modules.Crafting.Abstraction\Vortex.Modules.Crafting.Abstraction.csproj" />
+      <!-- Crafting fills the grid through the inventory's clicks; it keeps no slots of its own. -->
+      <ProjectReference Include="..\Vortex.Modules.Inventory.Abstraction\Vortex.Modules.Inventory.Abstraction.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="Vortex.Modules.Crafting.Test" />
+    </ItemGroup>
+
+</Project>

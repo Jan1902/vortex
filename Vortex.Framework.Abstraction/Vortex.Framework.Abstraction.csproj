@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Vortex.Modules.Entities.Abstraction\Vortex.Modules.Entities.Abstraction.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Inventory.Abstraction\Vortex.Modules.Inventory.Abstraction.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Interaction.Abstraction\Vortex.Modules.Interaction.Abstraction.csproj" />
+    <ProjectReference Include="..\Vortex.Modules.Crafting.Abstraction\Vortex.Modules.Crafting.Abstraction.csproj" />
   </ItemGroup>
 
 </Project>

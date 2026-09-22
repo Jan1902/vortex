@@ -166,6 +166,24 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(result.ToString());
     }
 
+    if (parts[1] == "craft")
+    {
+        if (parts.Length < 3 || Items.Parse(parts[2]) is not { } item)
+        {
+            await client.SendChatMessage("What? jeff craft <item> [count]");
+            return;
+        }
+
+        var amount = parts.Length > 3 && int.TryParse(parts[3], out var given) ? given : 1;
+        var task = client.Brain.CreateTask<CraftTask>(item, client.Inventory.Count(item) + amount);
+
+        await client.SendChatMessage($"On it: {task.Description}");
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage(result.ToString());
+    }
+
     if (parts[1] == "use")
     {
         if (Coordinates.ParseBlock(parts, 2) is not { } target)

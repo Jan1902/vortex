@@ -1,6 +1,7 @@
 ﻿using Vortex.Data;
 using Vortex.Shared;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Crafting.Abstraction;
 using Vortex.Modules.Entities.Abstraction;
 using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
@@ -83,6 +84,11 @@ public interface IVortexClient
     /// Gets the acts on the world: using items on blocks, using items, swinging.
     /// </summary>
     IInteractionManager Interaction { get; }
+
+    /// <summary>
+    /// Gets crafting in the open grid, and the recipe book.
+    /// </summary>
+    ICraftingManager Crafting { get; }
 
     /// <summary>
     /// Event that is raised when a chat message is received.

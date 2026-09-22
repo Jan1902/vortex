@@ -5,6 +5,7 @@ using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Chat;
+using Vortex.Modules.Crafting;
 using Vortex.Modules.Entities;
 using Vortex.Modules.Interaction;
 using Vortex.Modules.Inventory;
@@ -30,6 +31,7 @@ public class VortexClientBuilder
             typeof(EntitiesModule),
             typeof(InventoryModule),
             typeof(InteractionModule),
+            typeof(CraftingModule),
             typeof(NavigationModule),
             typeof(BehaviourModule)
         ];
