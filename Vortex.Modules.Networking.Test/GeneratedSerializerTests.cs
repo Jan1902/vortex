@@ -1,3 +1,4 @@
+using Vortex.Data;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.Networking.Data;
 using Vortex.Modules.Networking.Packets;
@@ -46,6 +47,8 @@ public record AllShapes(
     [Conditional] string? OptionalText,
     [Conditional] SampleNested[]? OptionalNested,
     SampleNested Nested,
+    ItemStack? Held,
+    ItemStack? Empty,
     int Reader,
     int Event);
 
@@ -78,6 +81,8 @@ public class GeneratedSerializerTests
             OptionalText: "present",
             OptionalNested: [new SampleNested("inner", [5]), new SampleNested("empty", null)],
             Nested: new SampleNested("outer", null),
+            Held: new ItemStack(Item.Torch, 5),
+            Empty: null,
             Reader: 7,
             Event: 8);
 
@@ -107,6 +112,8 @@ public class GeneratedSerializerTests
         Assert.Equal([5], copy.OptionalNested[0].Data!);
         Assert.Null(copy.OptionalNested[1].Data);
         Assert.Equal("outer", copy.Nested.Name);
+        Assert.Equal(original.Held, copy.Held);
+        Assert.Null(copy.Empty);
         Assert.Equal(original.Reader, copy.Reader);
         Assert.Equal(original.Event, copy.Event);
     }
@@ -118,7 +125,7 @@ public class GeneratedSerializerTests
             0, 0, "", Guid.Empty, Vector3i.Zero, false, SampleMode.Idle, SampleFlags.None, 0, 0, 0f,
             [], [], [], [0, 0, 0, 0], new bool[10],
             OptionalNumber: null, OptionalText: null, OptionalNested: null,
-            new SampleNested("", null), 0, 0);
+            new SampleNested("", null), null, null, 0, 0);
 
         var copy = RoundTrip(original);
 

@@ -1,4 +1,5 @@
-﻿using Vortex.Shared;
+﻿using Vortex.Data;
+using Vortex.Shared;
 
 namespace Vortex.Modules.Networking.Abstraction;
 
@@ -141,4 +142,16 @@ public interface IMinecraftBinaryReader : IDisposable
     /// </summary>
     /// <returns>The read NBT tag</returns>
     NbtTag ReadNbtTag();
+
+    /// <summary>
+    /// Reads an item slot: empty, or a stack with its components.
+    /// </summary>
+    /// <returns>The stack, or <c>null</c> for an empty slot.</returns>
+    ItemStack? ReadSlot();
+
+    /// <summary>
+    /// Reads whatever <paramref name="read"/> reads, and returns the bytes it
+    /// took up, so they can be kept and sent back as they were.
+    /// </summary>
+    byte[] Capture(Action<IMinecraftBinaryReader> read);
 }

@@ -2,6 +2,7 @@
 using System.Text;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.Networking.CustomTypes;
+using Vortex.Data;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Networking.Data;
@@ -23,7 +24,7 @@ public class MinecraftBinaryReader(Stream stream) : IMinecraftBinaryReader
     public byte[] ReadBytes(int count)
     {
         var buffer = new byte[count];
-        _stream.Read(buffer, 0, count);
+        _stream.ReadExactly(buffer);
         return buffer;
     }
 
@@ -92,4 +93,19 @@ public class MinecraftBinaryReader(Stream stream) : IMinecraftBinaryReader
 
     public NbtTag ReadNbtTag()
         => NbtReader.ParseNBT(this);
+
+    public ItemStack? ReadSlot()
+        => SlotSerializer.Read(this);
+
+    public byte[] Capture(Action<IMinecraftBinaryReader> read)
+    {
+        // Packets are read from memory, so the bytes can be gone over twice.
+        var start = _stream.Position;
+        read(this);
+        var end = _stream.Position;
+
+        _stream.Position = start;
+
+        return ReadBytes((int)(end - start));
+    }
 }

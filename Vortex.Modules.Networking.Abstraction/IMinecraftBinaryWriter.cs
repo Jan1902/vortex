@@ -1,4 +1,5 @@
-﻿using Vortex.Shared;
+﻿using Vortex.Data;
+using Vortex.Shared;
 
 namespace Vortex.Modules.Networking.Abstraction;
 
@@ -142,4 +143,10 @@ public interface IMinecraftBinaryWriter : IDisposable
     /// </summary>
     /// <param name="tag">The NBT tag to be written</param>
     void WriteNbtTag(NbtTag tag);
+
+    /// <summary>
+    /// Writes an item slot, with the stack's components exactly as they were read.
+    /// </summary>
+    /// <param name="stack">The stack, or <c>null</c> for an empty slot.</param>
+    void WriteSlot(ItemStack? stack);
 }

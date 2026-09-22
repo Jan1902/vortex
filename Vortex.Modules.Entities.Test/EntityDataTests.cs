@@ -55,7 +55,7 @@ public class EntityDataTests
     }
 
     [Fact]
-    public void KeepsTheItemButStopsAtComponents()
+    public void ReadsItemStacksWithComponentsAndGoesOn()
     {
         var packet = Read(writer =>
         {
@@ -66,12 +66,19 @@ public class EntityDataTests
                 writer.WriteVarInt((int)Item.DiamondSword);
                 writer.WriteVarInt(1);
                 writer.WriteVarInt(0);
-                writer.WriteBytes([9, 9, 9]);
+                writer.WriteVarInt((int)DataComponentType.Damage);
+                writer.WriteVarInt(12);
             });
+            Entry(writer, 5, EntityDataType.Boolean, () => writer.WriteBool(true));
+            writer.WriteByte(0xFF);
         });
 
-        Assert.False(packet.Complete);
-        Assert.Equal(new ItemStack(Item.DiamondSword, 1, HasComponents: true), packet.Values.Single().Value);
+        Assert.True(packet.Complete);
+
+        var sword = Assert.IsType<ItemStack>(packet.Values[0].Value);
+        Assert.Equal(Item.DiamondSword, sword.Item);
+        Assert.Equal(12, sword.Damage);
+        Assert.Equal(true, packet.Values[1].Value);
     }
 
     [Fact]

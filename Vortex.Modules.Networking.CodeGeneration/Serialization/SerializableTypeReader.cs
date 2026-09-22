@@ -43,6 +43,7 @@ internal static class SerializableTypeReader
         ["global::System.Guid"] = "UUID",
         ["global::Vortex.Shared.Vector3i"] = "Position",
         ["global::Vortex.Shared.NbtTag"] = "NbtTag",
+        ["global::Vortex.Data.ItemStack"] = "Slot",
     };
 
     /// <summary>

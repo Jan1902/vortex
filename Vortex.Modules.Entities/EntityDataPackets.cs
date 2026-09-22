@@ -10,8 +10,8 @@ namespace Vortex.Modules.Entities;
 /// Changes some of an entity's metadata: its health, the item it is, its name.
 /// </summary>
 /// <param name="Complete">
-/// Whether every value was read. A value of a kind that cannot be read ends the
-/// list early; the values before it are still good.
+/// Whether every value was read. Particles, whose layout is not modelled, end
+/// the list early; the values before them are still good.
 /// </param>
 [CustomSerialized<SetEntityDataSerializer, SetEntityData>(PacketIds.Play.ClientBound.SetEntityData)]
 public record SetEntityData(int EntityId, EntityDataValue[] Values, bool Complete) : PacketBase;
@@ -79,13 +79,10 @@ internal class SetEntityDataSerializer : IPacketSerializer<SetEntityData>
 
             var type = (EntityDataType)reader.ReadVarInt();
 
-            if (!TryReadValue(reader, type, out var value, out var canContinue))
+            if (!TryReadValue(reader, type, out var value))
                 return new SetEntityData(entityId, [.. values], Complete: false);
 
             values.Add(new EntityDataValue(index, value));
-
-            if (!canContinue)
-                return new SetEntityData(entityId, [.. values], Complete: false);
         }
     }
 
@@ -95,16 +92,9 @@ internal class SetEntityDataSerializer : IPacketSerializer<SetEntityData>
     /// <summary>
     /// Reads one value.
     /// </summary>
-    /// <param name="canContinue">
-    /// Whether the reader stands at the next entry afterwards. It does not after
-    /// an item stack with components, whose layouts are not known here; the
-    /// stack itself is still returned.
-    /// </param>
     /// <returns>Whether the value could be read at all.</returns>
-    private static bool TryReadValue(IMinecraftBinaryReader reader, EntityDataType type, out object? value, out bool canContinue)
+    private static bool TryReadValue(IMinecraftBinaryReader reader, EntityDataType type, out object? value)
     {
-        canContinue = true;
-
         switch (type)
         {
             case EntityDataType.Byte:
@@ -130,7 +120,7 @@ internal class SetEntityDataSerializer : IPacketSerializer<SetEntityData>
                 value = reader.ReadBool() ? reader.ReadNbtTag() : null;
                 return true;
             case EntityDataType.ItemStack:
-                value = ReadItemStack(reader, out canContinue);
+                value = reader.ReadSlot();
                 return true;
             case EntityDataType.Boolean:
                 value = reader.ReadBool();
@@ -181,35 +171,5 @@ internal class SetEntityDataSerializer : IPacketSerializer<SetEntityData>
                 value = null;
                 return false;
         }
-    }
-
-    /// <summary>
-    /// Reads an item stack. Its components, such as enchantments, each have a
-    /// layout of their own and no length, so a stack that has any ends the list.
-    /// </summary>
-    private static ItemStack? ReadItemStack(IMinecraftBinaryReader reader, out bool canContinue)
-    {
-        canContinue = true;
-
-        var count = reader.ReadVarInt();
-        if (count <= 0)
-            return null;
-
-        var item = (Item)reader.ReadVarInt();
-        var added = reader.ReadVarInt();
-        var removed = reader.ReadVarInt();
-
-        if (added > 0)
-        {
-            canContinue = false;
-
-            return new ItemStack(item, count, HasComponents: true);
-        }
-
-        // Removed components are only listed by type, which can be read past.
-        for (var i = 0; i < removed; i++)
-            reader.ReadVarInt();
-
-        return new ItemStack(item, count, HasComponents: removed > 0);
     }
 }

@@ -2,6 +2,7 @@
 using System.Text;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.Networking.CustomTypes;
+using Vortex.Data;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Networking.Data;
@@ -27,6 +28,9 @@ public class MinecraftBinaryWriter(Stream stream) : IMinecraftBinaryWriter
 
     public void WriteByte(byte value)
         => _stream.WriteByte(value);
+
+    public void WriteSlot(ItemStack? stack)
+        => SlotSerializer.Write(this, stack);
 
     public void WriteBytes(byte[] bytes)
         => _stream.Write(bytes);
