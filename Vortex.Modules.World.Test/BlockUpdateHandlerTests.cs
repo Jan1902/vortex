@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Vortex.Data;
 using Vortex.Modules.World.ChunkData.Palettes.Abstraction;
 using Vortex.Shared;
 
@@ -16,7 +17,7 @@ public class BlockUpdateHandlerTests
 
         await handler.HandleAsync(new BlockUpdate(new Vector3i(3, 70, 5), StoneId));
 
-        Assert.Equal("minecraft:stone", world.GetBlock(new Vector3i(3, 70, 5))?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(new Vector3i(3, 70, 5))?.Block);
     }
 
     [Fact]
@@ -40,7 +41,7 @@ public class BlockUpdateHandlerTests
 
         await handler.HandleAsync(new BlockUpdate(position, StoneId));
 
-        Assert.Equal("minecraft:stone", world.GetBlock(position)?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(position)?.Block);
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public class BlockUpdateHandlerTests
 
         // Writing an unknown id as air would be worse than keeping what is
         // there: the bot would walk into a block it thinks is gone.
-        Assert.Equal("minecraft:stone", world.GetBlock(position)?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(position)?.Block);
     }
 
     [Fact]
@@ -82,8 +83,8 @@ public class BlockUpdateHandlerTests
                 Entry(DirtId, x: 15, y: 0, z: 15),
             ]));
 
-        Assert.Equal("minecraft:stone", world.GetBlock(new Vector3i(1, 64 + 2, 3))?.BlockName);
-        Assert.Equal("minecraft:dirt", world.GetBlock(new Vector3i(15, 64, 15))?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(new Vector3i(1, 64 + 2, 3))?.Block);
+        Assert.Equal(Block.Dirt, world.GetBlock(new Vector3i(15, 64, 15))?.Block);
     }
 
     [Fact]
@@ -97,9 +98,7 @@ public class BlockUpdateHandlerTests
             SectionPosition(-1, -4, -1),
             [Entry(StoneId, x: 2, y: 5, z: 7)]));
 
-        Assert.Equal(
-            "minecraft:stone",
-            world.GetBlock(new Vector3i(-16 + 2, -64 + 5, -16 + 7))?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(new Vector3i(-16 + 2, -64 + 5, -16 + 7))?.Block);
     }
 
     [Fact]
@@ -111,7 +110,7 @@ public class BlockUpdateHandlerTests
             SectionPosition(0, 4, 0),
             [Entry(StoneId, x: 1, y: 0, z: 9)]));
 
-        Assert.Equal("minecraft:stone", world.GetBlock(new Vector3i(1, 64, 9))?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(new Vector3i(1, 64, 9))?.Block);
         Assert.Null(world.GetBlock(new Vector3i(9, 64, 1)));
     }
 
@@ -152,8 +151,8 @@ public class BlockUpdateHandlerTests
     {
         private static readonly Dictionary<int, BlockState> _states = new()
         {
-            [StoneId] = new BlockState(StoneId, "minecraft:stone"),
-            [DirtId] = new BlockState(DirtId, "minecraft:dirt"),
+            [StoneId] = BlockState.FromId(StoneId),
+            [DirtId] = BlockState.FromId(DirtId),
         };
 
         public BlockState GetStateFromId(int id)

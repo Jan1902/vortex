@@ -13,6 +13,12 @@
         <LangVersion>latest</LangVersion>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IsRoslynComponent>true</IsRoslynComponent>
+
+        <!--
+            RS2008 asks for release notes of every diagnostic, which matters for
+            analyzers shipped to others. These only report broken game data.
+        -->
+        <NoWarn>$(NoWarn);RS2008</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

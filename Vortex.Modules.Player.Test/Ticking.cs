@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Vortex.Data;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
@@ -93,8 +94,8 @@ internal sealed class Terrain(Func<int, int?> surface) : IWorldManager
 {
     public BlockState? GetBlock(Vector3i position)
         => surface(position.X) is { } top && position.Y <= top
-            ? new BlockState(1, "minecraft:stone")
-            : new BlockState(0, "minecraft:air");
+            ? BlockState.Default(Block.Stone)
+            : BlockState.Default(Block.Air);
 
     public Chunk? GetChunk(Vector2i position)
         => throw new NotSupportedException("The physics reads single blocks.");
@@ -109,13 +110,13 @@ internal sealed class Gapped(int gapFrom, int gapTo) : IWorldManager
     public BlockState? GetBlock(Vector3i position)
     {
         if (position.Y != Ticking.FloorTop - 1)
-            return new BlockState(0, "minecraft:air");
+            return BlockState.Default(Block.Air);
 
         var inGap = position.X >= gapFrom && position.X <= gapTo;
 
         return inGap
-            ? new BlockState(0, "minecraft:air")
-            : new BlockState(1, "minecraft:stone");
+            ? BlockState.Default(Block.Air)
+            : BlockState.Default(Block.Stone);
     }
 
     public Chunk? GetChunk(Vector2i position)

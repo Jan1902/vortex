@@ -1,3 +1,4 @@
+using Vortex.Data;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
@@ -173,7 +174,7 @@ public class StepUpJumpTests
 
         for (var x = -8; x <= 16; x++)
             for (var z = -8; z <= 8; z++)
-                world.SetBlock(new Vector3i(x, FloorTop - 1, z), "minecraft:stone");
+                world.SetBlock(new Vector3i(x, FloorTop - 1, z), Block.Stone);
 
         return world;
     }
@@ -184,7 +185,7 @@ public class StepUpJumpTests
         var world = FlatWorld();
 
         for (var z = -8; z <= 8; z++)
-            world.SetBlock(new Vector3i(LedgeX, FloorTop, z), "minecraft:stone");
+            world.SetBlock(new Vector3i(LedgeX, FloorTop, z), Block.Stone);
 
         return world;
     }
@@ -194,9 +195,9 @@ public class StepUpJumpTests
         private readonly Dictionary<Vector3i, BlockState> _blocks = [];
         private readonly HashSet<Vector2i> _loadedChunks = [];
 
-        public void SetBlock(Vector3i position, string blockName)
+        public void SetBlock(Vector3i position, Block block)
         {
-            _blocks[position] = new BlockState(0, blockName);
+            _blocks[position] = BlockState.Default(block);
             _loadedChunks.Add(new Vector2i(position.X >> 4, position.Z >> 4));
         }
 
@@ -206,7 +207,7 @@ public class StepUpJumpTests
                 return block;
 
             return _loadedChunks.Contains(new Vector2i(position.X >> 4, position.Z >> 4))
-                ? new BlockState(0, "minecraft:air")
+                ? BlockState.Default(Block.Air)
                 : null;
         }
 

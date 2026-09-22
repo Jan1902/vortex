@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Vortex.Data;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.Player;
@@ -85,7 +86,7 @@ public class DeathHandlingTests
 
     private sealed class EmptyWorld : World.Abstraction.IWorldManager
     {
-        public Shared.BlockState? GetBlock(Shared.Vector3i position) => null;
+        public BlockState? GetBlock(Shared.Vector3i position) => null;
 
         public Shared.Chunk? GetChunk(Shared.Vector2i position) => null;
     }

@@ -1,4 +1,5 @@
-﻿using Vortex.Modules.Networking.Abstraction;
+﻿using Vortex.Data;
+using Vortex.Modules.Networking.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.World.ChunkData.Palettes.Abstraction;

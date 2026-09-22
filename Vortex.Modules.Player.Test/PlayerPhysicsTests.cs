@@ -1,4 +1,5 @@
-﻿using Vortex.Modules.Player;
+﻿using Vortex.Data;
+using Vortex.Modules.Player;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
@@ -176,7 +177,7 @@ public class PlayerPhysicsTests
     public void PassesThroughGrass()
     {
         var world = FlatWorld();
-        world.SetBlock(new Vector3i(1, FloorTop, 0), "minecraft:short_grass");
+        world.SetBlock(new Vector3i(1, FloorTop, 0), Block.ShortGrass);
 
         var step = Step(world, Ground(0.5, 0.5), onGround: true, Walking());
 
@@ -333,7 +334,7 @@ public class PlayerPhysicsTests
     private static void Ledge(FakeWorld world, int x)
     {
         for (var z = -8; z <= 8; z++)
-            world.SetBlock(new Vector3i(x, FloorTop, z), "minecraft:stone");
+            world.SetBlock(new Vector3i(x, FloorTop, z), Block.Stone);
     }
 
     /// <summary>A world with a stone floor whose top surface is at <see cref="FloorTop"/>.</summary>
@@ -343,7 +344,7 @@ public class PlayerPhysicsTests
 
         for (var x = -8; x <= 8; x++)
             for (var z = -8; z <= 8; z++)
-                world.SetBlock(new Vector3i(x, FloorTop - 1, z), "minecraft:stone");
+                world.SetBlock(new Vector3i(x, FloorTop - 1, z), Block.Stone);
 
         return world;
     }
@@ -355,12 +356,12 @@ public class PlayerPhysicsTests
 
         for (var x = -8; x <= 1; x++)
             for (var z = -8; z <= 8; z++)
-                world.SetBlock(new Vector3i(x, FloorTop - 1, z), "minecraft:stone");
+                world.SetBlock(new Vector3i(x, FloorTop - 1, z), Block.Stone);
 
         // Air above the drop, so the columns count as loaded rather than unknown.
         for (var x = 2; x <= 8; x++)
             for (var z = -8; z <= 8; z++)
-                world.SetBlock(new Vector3i(x, FloorTop - 1, z), "minecraft:air");
+                world.SetBlock(new Vector3i(x, FloorTop - 1, z), Block.Air);
 
         return world;
     }
@@ -375,9 +376,9 @@ public class PlayerPhysicsTests
         private readonly Dictionary<Vector3i, BlockState> _blocks = [];
         private readonly HashSet<Vector2i> _loadedChunks = [];
 
-        public void SetBlock(Vector3i position, string blockName)
+        public void SetBlock(Vector3i position, Block block)
         {
-            _blocks[position] = new BlockState(0, blockName);
+            _blocks[position] = BlockState.Default(block);
             _loadedChunks.Add(new Vector2i(position.X >> 4, position.Z >> 4));
         }
 
@@ -387,7 +388,7 @@ public class PlayerPhysicsTests
                 return block;
 
             return _loadedChunks.Contains(new Vector2i(position.X >> 4, position.Z >> 4))
-                ? new BlockState(0, "minecraft:air")
+                ? BlockState.Default(Block.Air)
                 : null;
         }
 

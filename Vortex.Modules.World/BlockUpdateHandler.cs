@@ -70,6 +70,6 @@ internal class BlockUpdateHandler(
         }
 
         if (world.SetBlock(position, state))
-            logger.LogDebug("Block at {Position} is now {Block}", position, state.BlockName);
+            logger.LogDebug("Block at {Position} is now {Block}", position, state);
     }
 }

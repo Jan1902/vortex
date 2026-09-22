@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Vortex.Data;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Shared;
 
@@ -102,7 +103,7 @@ public class JumpGapTests
         // A hole in an open field: two walks and a jump beats going round it.
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .WithPool("minecraft:air", y: 63, fromX: 5, toX: 5, fromZ: -3, toZ: 3);
+            .WithPool(Block.Air, y: 63, fromX: 5, toX: 5, fromZ: -3, toZ: 3);
 
         var route = Find(world, MovementCapabilities.Athletic);
 
@@ -116,7 +117,7 @@ public class JumpGapTests
         var world = Trench(width: 1)
             // A roof over the gap: the arc would put the player's head through
             // it and drop it in.
-            .WithPool("minecraft:stone", y: 66, fromX: 4, toX: 7, fromZ: -1, toZ: 1);
+            .WithPool(Block.Stone, y: 66, fromX: 4, toX: 7, fromZ: -1, toZ: 1);
 
         Assert.Null(Find(world, MovementCapabilities.Athletic));
     }
@@ -127,7 +128,7 @@ public class JumpGapTests
         // Lava in the gap itself is nothing to be afraid of -- the arc passes
         // over it without touching.
         var overIt = Trench(width: 1)
-            .WithPool("minecraft:lava", y: 63, fromX: 5, toX: 5, fromZ: -1, toZ: 1);
+            .WithPool(Block.Lava, y: 63, fromX: 5, toX: 5, fromZ: -1, toZ: 1);
 
         Assert.Contains(Find(overIt, MovementCapabilities.Athletic)!.Moves, move => move is JumpGap);
 
@@ -135,7 +136,7 @@ public class JumpGapTests
         // enough that no landing within reach of any run-up is dry, there is
         // nowhere left to come down and the search says so.
         var intoIt = Trench(width: 1)
-            .WithPool("minecraft:lava", y: 64, fromX: 6, toX: 10, fromZ: -1, toZ: 1);
+            .WithPool(Block.Lava, y: 64, fromX: 6, toX: 10, fromZ: -1, toZ: 1);
 
         Assert.Null(Find(intoIt, MovementCapabilities.Athletic));
     }
@@ -147,7 +148,7 @@ public class JumpGapTests
     private static FakeWorld Trench(int width)
         => new FakeWorld()
             .WithFloor(63, -4, 12, -1, 1)
-            .WithPool("minecraft:air", y: 63, fromX: 5, toX: 4 + width, fromZ: -1, toZ: 1);
+            .WithPool(Block.Air, y: 63, fromX: 5, toX: 4 + width, fromZ: -1, toZ: 1);
 
     private static Route? Find(FakeWorld world, MovementCapabilities capabilities)
         => new AStarPathfinder(world, NullLogger<AStarPathfinder>.Instance)

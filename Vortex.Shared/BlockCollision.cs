@@ -1,4 +1,7 @@
-﻿namespace Vortex.Shared;
+﻿using System.Collections.Frozen;
+using Vortex.Data;
+
+namespace Vortex.Shared;
 
 /// <summary>
 /// Decides whether a block stops the player from moving through it.
@@ -19,38 +22,46 @@
 public static class BlockCollision
 {
     /// <summary>
-    /// Blocks the player passes straight through.
+    /// Blocks the player passes straight through: single blocks, and whole
+    /// families taken from the game's own tags.
     /// </summary>
-    private static readonly HashSet<string> _passable =
-    [
-        "air", "cave_air", "void_air",
-        "water", "lava", "bubble_column",
-        "fire", "soul_fire",
-        "short_grass", "grass", "tall_grass", "fern", "large_fern", "dead_bush",
-        "seagrass", "tall_seagrass", "kelp", "kelp_plant", "sugar_cane",
-        "vine", "glow_lichen", "cobweb", "hanging_roots",
-        "redstone_wire", "tripwire", "lever", "ladder", "scaffolding",
-        "torch", "wall_torch", "soul_torch", "soul_wall_torch",
-        "redstone_torch", "redstone_wall_torch",
-        "brown_mushroom", "red_mushroom",
-        "wheat", "carrots", "potatoes", "beetroots", "melon_stem", "pumpkin_stem",
-        "nether_wart", "sweet_berry_bush", "cave_vines", "cave_vines_plant",
-        "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet",
-        "oxeye_daisy", "cornflower", "lily_of_the_valley", "wither_rose",
-        "torchflower", "pitcher_plant", "sunflower", "lilac", "rose_bush", "peony",
-        "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
-        "nether_portal", "end_portal", "end_gateway",
-        "structure_void", "light", "snow",
-    ];
-
-    /// <summary>
-    /// Name endings shared by whole families of passable blocks.
-    /// </summary>
-    private static readonly string[] _passableSuffixes =
-    [
-        "_sapling", "_rail", "_button", "_pressure_plate", "_banner",
-        "_sign", "_carpet", "_candle", "_coral_fan", "_coral_wall_fan",
-    ];
+    private static readonly FrozenSet<Block> _passable = new[]
+    {
+        Block.Air, Block.CaveAir, Block.VoidAir,
+        Block.Water, Block.Lava, Block.BubbleColumn,
+        Block.Fire, Block.SoulFire,
+        Block.ShortGrass, Block.TallGrass, Block.Fern, Block.LargeFern, Block.DeadBush,
+        Block.Seagrass, Block.TallSeagrass, Block.Kelp, Block.KelpPlant, Block.SugarCane,
+        Block.Vine, Block.GlowLichen, Block.Cobweb, Block.HangingRoots,
+        Block.RedstoneWire, Block.Tripwire, Block.Lever, Block.Ladder, Block.Scaffolding,
+        Block.Torch, Block.WallTorch, Block.SoulTorch, Block.SoulWallTorch,
+        Block.RedstoneTorch, Block.RedstoneWallTorch,
+        Block.BrownMushroom, Block.RedMushroom,
+        Block.Wheat, Block.Carrots, Block.Potatoes, Block.Beetroots, Block.MelonStem, Block.PumpkinStem,
+        Block.NetherWart, Block.SweetBerryBush, Block.CaveVines, Block.CaveVinesPlant,
+        Block.Dandelion, Block.Poppy, Block.BlueOrchid, Block.Allium, Block.AzureBluet,
+        Block.OxeyeDaisy, Block.Cornflower, Block.LilyOfTheValley, Block.WitherRose,
+        Block.Torchflower, Block.PitcherPlant, Block.Sunflower, Block.Lilac, Block.RoseBush, Block.Peony,
+        Block.RedTulip, Block.OrangeTulip, Block.WhiteTulip, Block.PinkTulip,
+        Block.NetherPortal, Block.EndPortal, Block.EndGateway,
+        Block.StructureVoid, Block.Light, Block.Snow,
+        Block.MossCarpet, Block.BambooSapling,
+        Block.DeadTubeCoral, Block.DeadBrainCoral, Block.DeadBubbleCoral, Block.DeadFireCoral, Block.DeadHornCoral,
+        Block.DeadTubeCoralFan, Block.DeadBrainCoralFan, Block.DeadBubbleCoralFan, Block.DeadFireCoralFan, Block.DeadHornCoralFan,
+        Block.DeadTubeCoralWallFan, Block.DeadBrainCoralWallFan, Block.DeadBubbleCoralWallFan, Block.DeadFireCoralWallFan, Block.DeadHornCoralWallFan,
+    }
+        .Concat(BlockTags.Buttons)
+        .Concat(BlockTags.PressurePlates)
+        .Concat(BlockTags.Rails)
+        .Concat(BlockTags.Banners)
+        .Concat(BlockTags.AllSigns)
+        .Concat(BlockTags.WoolCarpets)
+        .Concat(BlockTags.Candles)
+        .Concat(BlockTags.Corals)
+        .Concat(BlockTags.WallCorals)
+        // Azaleas count as saplings, but are bushes the player bumps into.
+        .Concat(BlockTags.Saplings.Where(block => block is not (Block.Azalea or Block.FloweringAzalea)))
+        .ToFrozenSet();
 
     /// <summary>
     /// Determines whether the player collides with a block.
@@ -64,22 +75,6 @@ public static class BlockCollision
         if (state is null)
             return true;
 
-        var name = StripNamespace(state.BlockName);
-
-        if (_passable.Contains(name))
-            return false;
-
-        foreach (var suffix in _passableSuffixes)
-            if (name.EndsWith(suffix, StringComparison.Ordinal))
-                return false;
-
-        return true;
-    }
-
-    private static string StripNamespace(string blockName)
-    {
-        var separator = blockName.IndexOf(':');
-
-        return separator < 0 ? blockName : blockName[(separator + 1)..];
+        return !_passable.Contains(state.Block);
     }
 }

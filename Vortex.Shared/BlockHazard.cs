@@ -1,3 +1,6 @@
+using System.Collections.Frozen;
+using Vortex.Data;
+
 namespace Vortex.Shared;
 
 /// <summary>
@@ -22,18 +25,18 @@ public static class BlockHazard
     /// <summary>
     /// Blocks that damage the player for being in or on them.
     /// </summary>
-    private static readonly HashSet<string> _harmful =
-    [
-        "lava",
-        "fire", "soul_fire",
-        "magma_block",
-        "cactus",
-        "sweet_berry_bush",
-        "wither_rose",
-        "powder_snow",
-        "campfire", "soul_campfire",
-        "end_portal", "end_gateway", "nether_portal",
-    ];
+    private static readonly FrozenSet<Block> _harmful = new[]
+    {
+        Block.Lava,
+        Block.Fire, Block.SoulFire,
+        Block.MagmaBlock,
+        Block.Cactus,
+        Block.SweetBerryBush,
+        Block.WitherRose,
+        Block.PowderSnow,
+        Block.Campfire, Block.SoulCampfire,
+        Block.EndPortal, Block.EndGateway, Block.NetherPortal,
+    }.ToFrozenSet();
 
     /// <summary>
     /// Determines whether being at a block would hurt.
@@ -45,7 +48,7 @@ public static class BlockHazard
     /// and calling it dangerous as well would only confuse the reason.
     /// </remarks>
     public static bool IsHarmful(BlockState? state)
-        => state is not null && _harmful.Contains(StripNamespace(state.BlockName));
+        => state is not null && _harmful.Contains(state.Block);
 
     /// <summary>
     /// Determines whether the player would be underwater with its head in this
@@ -58,12 +61,5 @@ public static class BlockHazard
     /// rather than about water anywhere.
     /// </remarks>
     public static bool Drowns(BlockState? state)
-        => state is not null && StripNamespace(state.BlockName) is "water" or "bubble_column";
-
-    private static string StripNamespace(string blockName)
-    {
-        var separator = blockName.IndexOf(':');
-
-        return separator < 0 ? blockName : blockName[(separator + 1)..];
-    }
+        => state?.Block is Block.Water or Block.BubbleColumn;
 }

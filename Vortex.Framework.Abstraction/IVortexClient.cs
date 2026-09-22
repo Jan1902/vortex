@@ -1,4 +1,5 @@
-﻿using Vortex.Shared;
+﻿using Vortex.Data;
+using Vortex.Shared;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 

@@ -1,3 +1,4 @@
+using Vortex.Data;
 using Vortex.Shared;
 
 namespace Vortex.Modules.World.Test;
@@ -32,9 +33,9 @@ public class WorldManagerTests
         var world = Loaded();
         var position = new Vector3i(7, 64, 9);
 
-        Assert.True(world.SetBlock(position, new BlockState(1, "minecraft:stone")));
+        Assert.True(world.SetBlock(position, BlockState.Default(Block.Stone)));
 
-        Assert.Equal("minecraft:stone", world.GetBlock(position)?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(position)?.Block);
     }
 
     [Fact]
@@ -43,7 +44,7 @@ public class WorldManagerTests
         var world = Loaded();
         var position = new Vector3i(7, 64, 9);
 
-        world.SetBlock(position, new BlockState(1, "minecraft:stone"));
+        world.SetBlock(position, BlockState.Default(Block.Stone));
         world.SetBlock(position, null);
 
         Assert.Null(world.GetBlock(position));
@@ -54,7 +55,7 @@ public class WorldManagerTests
     {
         var world = Loaded();
 
-        Assert.False(world.SetBlock(new Vector3i(900, 64, 900), new BlockState(1, "minecraft:stone")));
+        Assert.False(world.SetBlock(new Vector3i(900, 64, 900), BlockState.Default(Block.Stone)));
     }
 
     [Fact]
@@ -62,8 +63,8 @@ public class WorldManagerTests
     {
         var world = Loaded();
 
-        Assert.False(world.SetBlock(new Vector3i(0, -65, 0), new BlockState(1, "minecraft:stone")));
-        Assert.False(world.SetBlock(new Vector3i(0, 320, 0), new BlockState(1, "minecraft:stone")));
+        Assert.False(world.SetBlock(new Vector3i(0, -65, 0), BlockState.Default(Block.Stone)));
+        Assert.False(world.SetBlock(new Vector3i(0, 320, 0), BlockState.Default(Block.Stone)));
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class WorldManagerTests
         // Chunks arrive on the network thread while the physics loop and the
         // pathfinder read the world from their own.
         var world = Loaded();
-        var stone = new BlockState(1, "minecraft:stone");
+        var stone = BlockState.Default(Block.Stone);
 
         Parallel.For(0, 2000, i =>
         {
@@ -85,7 +86,7 @@ public class WorldManagerTests
             world.SetChunk(new Vector2i(1 + i % 3, 1 + i % 3), EmptyChunk());
         });
 
-        Assert.Equal("minecraft:stone", world.GetBlock(new Vector3i(0, 64, 0))?.BlockName);
+        Assert.Equal(Block.Stone, world.GetBlock(new Vector3i(0, 64, 0))?.Block);
     }
 
     private static WorldManager Loaded()

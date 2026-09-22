@@ -15,6 +15,6 @@ public class WorldModule : IModule
 
         builder.RegisterType<ChunkDataHandler>();
         builder.RegisterType<PaletteFactory>();
-        builder.RegisterType<FileGlobalPaletteProvider>().AsImplementedInterfaces();
+        builder.RegisterType<GlobalPaletteProvider>().AsImplementedInterfaces();
     }
 }

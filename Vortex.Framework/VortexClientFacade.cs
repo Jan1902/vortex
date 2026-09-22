@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Microsoft.Extensions.Logging;
+using Vortex.Data;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Chat.Abstraction;

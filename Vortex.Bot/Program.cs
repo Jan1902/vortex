@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Vortex.Data;
 using Vortex.Framework;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour.Tasks;
@@ -103,7 +104,7 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
 
         var block = client.GetBlock(position);
 
-        await client.SendChatMessage(block?.BlockName ?? "Nothing");
+        await client.SendChatMessage(block?.ToString() ?? "Nothing");
     }
 
     if (parts[1] == "chunk")
@@ -138,7 +139,7 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
             {
                 var block = section.States[x, position.Y & 0xf, z];
 
-                line += (block?.BlockName.Split(":")[1][0] ?? 'x') + " ";
+                line += (block is null ? 'x' : char.ToLowerInvariant(block.Block.ToString()[0])) + " ";
             }
             text += line + "\n";
         }

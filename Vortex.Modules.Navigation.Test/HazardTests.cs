@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Vortex.Data;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Shared;
 
@@ -14,7 +15,7 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .WithPool("minecraft:lava", y: 64, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
+            .WithPool(Block.Lava, y: 64, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
 
         var route = Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0));
 
@@ -30,7 +31,7 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .WithPool("minecraft:magma_block", y: 63, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
+            .WithPool(Block.MagmaBlock, y: 63, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
 
         var route = Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0));
 
@@ -45,7 +46,7 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .WithPool("minecraft:fire", y: 65, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
+            .WithPool(Block.Fire, y: 65, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
 
         var route = Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0));
 
@@ -58,7 +59,7 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .WithPool("minecraft:water", y: 64, fromX: 3, toX: 3, fromZ: -8, toZ: 8);
+            .WithPool(Block.Water, y: 64, fromX: 3, toX: 3, fromZ: -8, toZ: 8);
 
         var route = Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0));
 
@@ -74,8 +75,8 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .WithPool("minecraft:water", y: 64, fromX: 3, toX: 3, fromZ: -2, toZ: 2)
-            .WithPool("minecraft:water", y: 65, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
+            .WithPool(Block.Water, y: 64, fromX: 3, toX: 3, fromZ: -2, toZ: 2)
+            .WithPool(Block.Water, y: 65, fromX: 3, toX: 3, fromZ: -2, toZ: 2);
 
         var route = Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0));
 
@@ -91,7 +92,7 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -4, 12, -1, 1)
-            .WithPool("minecraft:lava", y: 64, fromX: 3, toX: 3, fromZ: -1, toZ: 1);
+            .WithPool(Block.Lava, y: 64, fromX: 3, toX: 3, fromZ: -1, toZ: 1);
 
         var route = Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0));
 
@@ -104,7 +105,7 @@ public class HazardTests
     {
         var world = new FakeWorld()
             .WithFloor(63, -8, 12, -8, 8)
-            .With(new Vector3i(6, 63, 0), "minecraft:magma_block");
+            .With(new Vector3i(6, 63, 0), Block.MagmaBlock);
 
         Assert.Null(Find(world, new Vector3i(0, 64, 0), new Vector3i(6, 64, 0)));
     }

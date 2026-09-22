@@ -1,4 +1,7 @@
-﻿namespace Vortex.Shared;
+﻿using Vortex.Data;
+
+
+namespace Vortex.Shared;
 
 public record Vector3i(int X, int Y, int Z)
 {
@@ -47,6 +50,5 @@ public record Vector3d(double X, double Y, double Z)
     }
 }
 
-public record BlockState(int Id, string BlockName);
 public record Chunk(ChunkSection[] Sections);
 public record ChunkSection(BlockState?[,,] States);

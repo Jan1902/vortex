@@ -1,3 +1,4 @@
+using Vortex.Data;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
@@ -14,8 +15,8 @@ namespace Vortex.Modules.Navigation.Test;
 /// </remarks>
 internal class FakeWorld : IWorldManager
 {
-    private static readonly BlockState _stone = new(1, "minecraft:stone");
-    private static readonly BlockState _air = new(0, "minecraft:air");
+    private static readonly BlockState _stone = BlockState.Default(Block.Stone);
+    private static readonly BlockState _air = BlockState.Default(Block.Air);
 
     private readonly HashSet<Vector3i> _solid = [];
     private readonly HashSet<Vector3i> _unloaded = [];
@@ -88,21 +89,21 @@ internal class FakeWorld : IWorldManager
     }
 
     /// <summary>Puts a named block somewhere, for the ones that are not stone.</summary>
-    public FakeWorld With(Vector3i position, string blockName)
+    public FakeWorld With(Vector3i position, Block block)
     {
-        _named[position] = new BlockState(1, blockName);
+        _named[position] = BlockState.Default(block);
         Load(position.X, position.Z);
 
         return this;
     }
 
     /// <summary>Fills a run of blocks with something named, such as a lava channel.</summary>
-    public FakeWorld WithPool(string blockName, int y, int fromX, int toX, int fromZ, int toZ)
+    public FakeWorld WithPool(Block block, int y, int fromX, int toX, int fromZ, int toZ)
     {
         for (var x = fromX; x <= toX; x++)
             for (var z = fromZ; z <= toZ; z++)
             {
-                _named[new Vector3i(x, y, z)] = new BlockState(1, blockName);
+                _named[new Vector3i(x, y, z)] = BlockState.Default(block);
                 Load(x, z);
             }
 
