@@ -47,6 +47,18 @@ public class VortexClientBuilder
     }
 
     /// <summary>
+    /// Sets the name the bot logs in with.
+    /// </summary>
+    /// <param name="username">The name; only offline mode servers accept any.</param>
+    /// <returns>The current instance of <see cref="VortexClientBuilder"/>.</returns>
+    public VortexClientBuilder WithUsername(string username)
+    {
+        _configuration.Username = username;
+
+        return this;
+    }
+
+    /// <summary>
     /// Turns on debug logging, which is where the task runner writes out what it
     /// is trying to achieve, which precondition it settled on and how each step
     /// turned out.

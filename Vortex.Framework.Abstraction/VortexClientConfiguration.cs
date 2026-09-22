@@ -16,6 +16,12 @@ public class VortexClientConfiguration
     public int Port { get; set; } = 25565;
 
     /// <summary>
+    /// Gets or sets the name the bot logs in with. Only offline mode servers
+    /// accept any name. Default value is "Jeff".
+    /// </summary>
+    public string Username { get; set; } = "Jeff";
+
+    /// <summary>
     /// Gets or sets how many chunks in each direction the client asks the server
     /// for. The server caps this at its own view distance. Default value is 8.
     /// </summary>

@@ -3,6 +3,7 @@ using Vortex.Data;
 using Vortex.Framework;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Entities.Abstraction;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Shared;
 
@@ -78,6 +79,43 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         var result = await client.Brain.RunAsync(task);
 
         await client.SendChatMessage(result.ToString());
+    }
+
+    if (parts[1] == "come")
+    {
+        // Heads for where the player stands right now, once; it does not follow.
+        if (chat.SenderUuid is not { } sender)
+        {
+            await client.SendChatMessage("Only players can call me over");
+            return;
+        }
+
+        if (client.Entities.Get(sender) is not { } player)
+        {
+            await client.SendChatMessage("I can't see you from here");
+            return;
+        }
+
+        var task = client.Brain.CreateTask<GoToTask>(player.Position.ToBlockPosition(), MovementCapabilities.Athletic);
+
+        await client.SendChatMessage($"Coming, {chat.SenderName ?? "on my way"}: {task.Description}");
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage(result.ToString());
+    }
+
+    if (parts[1] == "near")
+    {
+        var nearby = client.Entities.Entities
+            .OrderBy(entity => entity.Position.DistanceTo(client.Position))
+            .Take(5)
+            .Select(entity => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{Describe(entity)} ({entity.Position.DistanceTo(client.Position):F1}m)"))
+            .ToList();
+
+        await client.SendChatMessage(nearby.Count == 0 ? "Nobody around" : string.Join(", ", nearby));
     }
 
     if (parts[1] == "doing")
@@ -166,6 +204,19 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
             await Task.Delay(random.Next(500, 3000));
         }
     }
+}
+
+string Describe(Entity entity)
+{
+    if (entity.Type == EntityType.Player && client.Entities.GetPlayer(entity.Uuid) is { } player)
+        return player.Name;
+
+    if (entity.Item is { } stack)
+        return $"{stack.Count}x {stack.Item}";
+
+    return entity.Health is { } health
+        ? string.Create(CultureInfo.InvariantCulture, $"{entity.Type} {health:F0}hp")
+        : entity.Type.ToString();
 }
 
 // Keep the bot alive until the process is stopped. A spin loop here would burn

@@ -5,7 +5,7 @@ using Vortex.Modules.Networking.Packets;
 
 namespace Vortex.Modules.Networking;
 
-internal class NetworkingEventHandler(NetworkingConnection connection, NetworkingController controller) : IEventHandler<ConnectionEstablishedEvent>
+internal class NetworkingEventHandler(NetworkingConnection connection, NetworkingController controller, VortexClientConfiguration configuration) : IEventHandler<ConnectionEstablishedEvent>
 {
     public async Task HandleAsync(ConnectionEstablishedEvent @event)
     {
@@ -13,6 +13,6 @@ internal class NetworkingEventHandler(NetworkingConnection connection, Networkin
 
         await controller.SetState(ProtocolState.Login);
 
-        await connection.SendPacket(new LoginStartPacket("Jeff", Guid.NewGuid()));
+        await connection.SendPacket(new LoginStartPacket(configuration.Username, Guid.NewGuid()));
     }
 }
