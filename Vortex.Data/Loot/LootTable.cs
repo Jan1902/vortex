@@ -57,10 +57,20 @@ public static partial class LootTables
         => _tables[(int)block].Value;
 
     /// <summary>
-    /// The items breaking a block can drop in a context.
+    /// The items mining a block with a tool can drop.
     /// </summary>
+    /// <remarks>
+    /// A block that needs the right tool, such as stone, drops nothing at all
+    /// without it. The game decides that before it looks at the loot table,
+    /// which is why the table itself does not say so.
+    /// </remarks>
     public static IReadOnlySet<Item> PossibleDrops(BlockState state, Item? tool = null, IReadOnlyDictionary<Enchantment, int>? enchantments = null)
-        => For(state.Block)?.PossibleDrops(LootContext.Mining(state, tool, enchantments)) ?? new HashSet<Item>();
+    {
+        if (!Mining.CanHarvest(state.Block, tool))
+            return new HashSet<Item>();
+
+        return For(state.Block)?.PossibleDrops(LootContext.Mining(state, tool, enchantments)) ?? new HashSet<Item>();
+    }
 
     private static partial LootTable? Create(Block block);
 }

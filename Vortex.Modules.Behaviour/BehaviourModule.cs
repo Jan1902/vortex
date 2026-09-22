@@ -20,5 +20,7 @@ public class BehaviourModule : IModule
         builder.RegisterType<GoToTask>().AsSelf();
         builder.RegisterType<CollectItemsTask>().AsSelf();
         builder.RegisterType<UseBlockTask>().AsSelf();
+        builder.RegisterType<MineBlockTask>().AsSelf();
+        builder.RegisterType<HarvestBlockTask>().AsSelf();
     }
 }

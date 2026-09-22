@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Vortex.Data;
 using Vortex.Modules.Inventory.Abstraction;
+using Vortex.Modules.Networking.Abstraction;
 
 namespace Vortex.Modules.Inventory;
 
@@ -13,7 +14,7 @@ namespace Vortex.Modules.Inventory;
 /// and an open container consistent with each other, since one update can
 /// change both.
 /// </remarks>
-internal class InventoryManager : IInventoryManager
+internal class InventoryManager(INetworkingManager networking) : IInventoryManager
 {
     private readonly object _lock = new();
 
@@ -201,6 +202,17 @@ internal class InventoryManager : IInventoryManager
 
             return true;
         }
+    }
+
+    public async Task SelectHotbarSlotAsync(int slot)
+    {
+        if (slot is < 0 or >= PlayerSlots.HotbarCount)
+            throw new ArgumentOutOfRangeException(nameof(slot), slot, "The hotbar has nine slots, 0 to 8.");
+
+        // The server takes this as said and does not answer, so it is set here too.
+        SelectHotbarSlot(slot);
+
+        await networking.SendPacket(new ServerBoundSetCarriedItem((short)slot));
     }
 
     public void SelectHotbarSlot(int slot)

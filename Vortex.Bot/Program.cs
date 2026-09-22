@@ -131,6 +131,23 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(result.ToString());
     }
 
+    if (parts[1] == "mine")
+    {
+        if (Coordinates.ParseBlock(parts, 2) is not { } target)
+        {
+            await client.SendChatMessage("Which block? jeff mine <x> <y> <z>");
+            return;
+        }
+
+        var task = client.Brain.CreateTask<HarvestBlockTask>(target);
+
+        await client.SendChatMessage($"On it: {task.Description}");
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage(result.ToString());
+    }
+
     if (parts[1] == "use")
     {
         if (Coordinates.ParseBlock(parts, 2) is not { } target)

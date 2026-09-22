@@ -30,6 +30,17 @@ public interface IInteractionManager
     /// <returns>Whether the server confirmed it.</returns>
     Task<bool> UseItemAsync(float yaw, float pitch, Hand hand = Hand.Main, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Breaks a block: starts, keeps at it for as long as the caller says it
+    /// takes, and finishes.
+    /// </summary>
+    /// <param name="ticks">
+    /// How long breaking takes with what is in hand, in ticks; 0 for a block
+    /// that breaks at once. The server checks it, so finishing early fails.
+    /// </param>
+    /// <returns>Whether the server confirmed finishing. The block itself changes the usual way.</returns>
+    Task<bool> DigAsync(Vector3i block, BlockFace face, int ticks, CancellationToken cancellationToken = default);
+
     /// <summary>Swings an arm, which others see and some things react to.</summary>
     Task SwingAsync(Hand hand = Hand.Main);
 }

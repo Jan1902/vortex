@@ -54,16 +54,29 @@ internal class FakeEntities : IEntityManager
 
 internal class FakeInventory : IInventoryManager
 {
+    private readonly ItemStack?[] _slots = new ItemStack?[PlayerSlots.Count];
+
     /// <summary>Items the inventory has no room for.</summary>
     public HashSet<Item> Full { get; } = [];
 
-    public ContainerWindow Player => throw new NotSupportedException();
+    public ContainerWindow Player
+        => new(ContainerWindow.PlayerWindowId, null, 0, [.. _slots], ImmutableDictionary<int, int>.Empty);
+
     public ContainerWindow? OpenContainer => null;
     public ItemStack? Cursor => null;
-    public int SelectedHotbarSlot => 0;
-    public ItemStack? HeldItem => null;
+    public int SelectedHotbarSlot { get; private set; }
+    public ItemStack? HeldItem => _slots[PlayerSlots.Hotbar(SelectedHotbarSlot)];
+
+    /// <summary>Puts something into a hotbar slot.</summary>
+    public void Hotbar(int slot, Item item) => _slots[PlayerSlots.Hotbar(slot)] = new ItemStack(item, 1);
 
     public int Count(Item item) => 0;
     public IReadOnlyList<(int Slot, ItemStack Stack)> Find(Func<ItemStack, bool> match) => [];
     public int SpaceFor(Item item) => Full.Contains(item) ? 0 : 64;
+
+    public Task SelectHotbarSlotAsync(int slot)
+    {
+        SelectedHotbarSlot = slot;
+        return Task.CompletedTask;
+    }
 }

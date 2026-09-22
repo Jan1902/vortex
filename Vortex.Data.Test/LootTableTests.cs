@@ -59,6 +59,18 @@ public class LootTableTests
     }
 
     [Fact]
+    public void BlocksThatNeedATool()
+    {
+        // Stone's loot table does not ask for a pickaxe; the game does, before it
+        // looks at the table.
+        var stone = BlockState.Default(Block.Stone);
+
+        Assert.Empty(LootTables.PossibleDrops(stone));
+        Assert.Empty(LootTables.PossibleDrops(BlockState.Default(Block.IronOre), Item.WoodenPickaxe));
+        Assert.Equal([Item.RawIron], LootTables.PossibleDrops(BlockState.Default(Block.IronOre), Item.StonePickaxe));
+    }
+
+    [Fact]
     public void AirDropsNothing()
         => Assert.Empty(LootTables.PossibleDrops(BlockState.Default(Block.Air)));
 }

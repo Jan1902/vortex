@@ -68,6 +68,38 @@ public class InteractionTests
         Assert.False(third.IsCompleted);
     }
 
+    [Fact]
+    public async Task DigsForTheTimeItIsGiven()
+    {
+        _networking.Server = ConfirmDigging;
+
+        var started = DateTime.UtcNow;
+        Assert.True(await _interaction.DigAsync(new Vector3i(3, 64, 3), BlockFace.West, ticks: 4));
+
+        var actions = _networking.Sent.OfType<PlayerAction>().ToList();
+        Assert.Equal([DigAction.Start, DigAction.Finish], actions.Select(a => a.Action));
+        Assert.All(actions, a => Assert.Equal(BlockFace.West, a.Face));
+        Assert.True(actions[1].Sequence > actions[0].Sequence);
+        Assert.Contains(_networking.Sent, packet => packet is Swing);
+        Assert.True(DateTime.UtcNow - started >= TimeSpan.FromMilliseconds(200));
+    }
+
+    [Fact]
+    public async Task OnlyStartsABlockThatBreaksAtOnce()
+    {
+        _networking.Server = ConfirmDigging;
+
+        Assert.True(await _interaction.DigAsync(Vector3i.Zero, BlockFace.Up, ticks: 0));
+
+        Assert.Equal(DigAction.Start, _networking.Sent.OfType<PlayerAction>().Single().Action);
+    }
+
+    private void ConfirmDigging(Vortex.Modules.Networking.Abstraction.PacketBase packet)
+    {
+        if (packet is PlayerAction action)
+            _sequencer.Confirm(action.Sequence);
+    }
+
     [Theory]
     [InlineData(0.5, 70, 0.5, BlockFace.Up)]
     [InlineData(0.5, 60, 0.5, BlockFace.Down)]

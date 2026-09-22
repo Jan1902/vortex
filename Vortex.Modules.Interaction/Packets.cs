@@ -25,6 +25,25 @@ public record UseItemOn(
 [AutoSerializedPacket(PacketIds.Play.ServerBound.UseItem, packetDirection: PacketDirection.ServerBound)]
 public record UseItem(Hand Hand, int Sequence, float Yaw, float Pitch) : PacketBase;
 
+/// <summary>
+/// What a <see cref="PlayerAction"/> does. The packet can also drop items and
+/// swap hands; those change the inventory, which does it through clicks instead.
+/// </summary>
+public enum DigAction
+{
+    Start = 0,
+    Cancel = 1,
+    Finish = 2
+}
+
+/// <summary>Starts, cancels or finishes breaking a block.</summary>
+[AutoSerializedPacket(PacketIds.Play.ServerBound.PlayerAction, packetDirection: PacketDirection.ServerBound)]
+public record PlayerAction(
+    DigAction Action,
+    Vector3i Location,
+    [OverwriteType(OverwriteType.Byte)] BlockFace Face,
+    int Sequence) : PacketBase;
+
 /// <summary>Swings an arm.</summary>
 [AutoSerializedPacket(PacketIds.Play.ServerBound.Swing, packetDirection: PacketDirection.ServerBound)]
 public record Swing(Hand Hand) : PacketBase;

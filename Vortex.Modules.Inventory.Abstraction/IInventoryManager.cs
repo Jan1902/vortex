@@ -37,4 +37,10 @@ public interface IInventoryManager
     /// onto stacks of it that are not full.
     /// </summary>
     int SpaceFor(Item item);
+
+    /// <summary>
+    /// Selects a hotbar slot, which puts what is in it into the main hand.
+    /// </summary>
+    /// <param name="slot">The hotbar position, 0 to 8.</param>
+    Task SelectHotbarSlotAsync(int slot);
 }

@@ -162,7 +162,10 @@ public enum OverwriteType
     VarLong,
 
     /// <summary>A rotation in 1/256 steps of a full turn, read into a <c>float</c> in degrees.</summary>
-    Angle
+    Angle,
+
+    /// <summary>A single byte, as some enums are sent.</summary>
+    Byte
 }
 
 /// <summary>

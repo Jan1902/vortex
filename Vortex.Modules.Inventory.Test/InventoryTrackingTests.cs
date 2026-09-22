@@ -7,7 +7,7 @@ namespace Vortex.Modules.Inventory.Test;
 
 public class InventoryTrackingTests
 {
-    private readonly InventoryManager _inventory = new();
+    private readonly InventoryManager _inventory = new(new NoNetworking());
     private readonly RecordingEventBus _events = new();
     private readonly InventoryPacketHandler _handler;
 
@@ -102,5 +102,20 @@ public class InventoryTrackingTests
 
         Assert.Equal(4, _inventory.SpaceFor(Item.Cobblestone));
         Assert.Equal(0, _inventory.SpaceFor(Item.Dirt));
+    }
+}
+
+internal class NoNetworking : Vortex.Modules.Networking.Abstraction.INetworkingManager
+{
+    public List<Vortex.Modules.Networking.Abstraction.PacketBase> Sent { get; } = [];
+
+    public Task Connect() => Task.CompletedTask;
+
+    public Task ConnectAndWaitForPlay() => Task.CompletedTask;
+
+    public Task SendPacket(Vortex.Modules.Networking.Abstraction.PacketBase packet)
+    {
+        Sent.Add(packet);
+        return Task.CompletedTask;
     }
 }

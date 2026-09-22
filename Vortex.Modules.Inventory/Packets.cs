@@ -42,6 +42,10 @@ public record OpenScreen(int WindowId, Menu Type, NbtTag Title) : PacketBase;
 [AutoSerializedPacket(PacketIds.Play.ClientBound.ContainerClose)]
 public record ClientBoundContainerClose(byte WindowId) : PacketBase;
 
+/// <summary>Selects a hotbar slot.</summary>
+[AutoSerializedPacket(PacketIds.Play.ServerBound.SetCarriedItem, packetDirection: PacketDirection.ServerBound)]
+public record ServerBoundSetCarriedItem(short Slot) : PacketBase;
+
 /// <summary>The server selected a hotbar slot.</summary>
 [AutoSerializedPacket(PacketIds.Play.ClientBound.SetCarriedItem)]
 public record ClientBoundSetCarriedItem(byte Slot) : PacketBase;
