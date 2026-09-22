@@ -4,48 +4,65 @@ using Vortex.Shared;
 namespace Vortex.Modules.Player.Test;
 
 /// <summary>
-/// The run-up, the take-off and what counts as having landed.
+/// The take-off, the steering in the air and what counts as having landed.
 /// </summary>
 /// <remarks>
-/// These drive the controller against made-up states to pin down its
-/// bookkeeping. What the jump actually does to the player is in
-/// <see cref="LeapLandingTests"/>, which runs the real physics.
+/// These drive the controller against made-up states to pin down its rules.
+/// What a jump actually does to the player is in <see cref="LeapLandingTests"/>
+/// and <see cref="JumpReachTests"/>, which run the real physics.
 /// </remarks>
 public class JumpToTests
 {
-    /// <summary>The floor is missing at x = 5, so the last solid block is x = 4.</summary>
-    private const int Gap = 5;
-
-    /// <summary>
-    /// How far past the edge the player's feet still find ground, being wider
-    /// than the block its middle is over.
-    /// </summary>
-    private const double Lip = 0.3;
+    /// <summary>The ground ends at x = 5.</summary>
+    private const int Edge = 5;
 
     private static readonly Vector3d _start = new(2.5, Ticking.FloorTop, 0.5);
-    private static readonly Vector3d _takeOff = new(Gap, Ticking.FloorTop, 0.5);
-    private static readonly Vector3d _landing = new(Gap + 1.5, Ticking.FloorTop, 0.5);
+    private static readonly Vector3d _takeOff = new(Edge, Ticking.FloorTop, 0.5);
+    private static readonly Vector3d _landing = new(Edge + 1.5, Ticking.FloorTop, 0.5);
 
     [Fact]
-    public void WillNotStepUpMidLeap()
+    public void WillNotStepUpDuringALeap()
     {
         var controller = Leaping(out _);
 
-        // Catching the lip of the gap would turn a planned jump into a scramble,
-        // so the run-up may not climb either.
+        // Catching the lip of the gap would turn a planned jump into a scramble.
         Assert.False(controller.Tick(Ticking.At(_start)).AllowStepUp);
     }
 
     [Fact]
-    public void TakesOffFromTheLastBlockBeforeTheGap()
+    public void AWalkingJumpLeavesAtTheEdge()
     {
         var controller = Leaping(out _);
 
-        // Not from halfway down the run-up: the jump belongs at the end of the
-        // ground. The player is 0.6 wide, so its feet still carry it a little
-        // past the block's edge before the ground truly runs out, and taking off
-        // from there is the latest -- and longest -- jump available.
-        Assert.InRange(RunUpTo(controller, _takeOff).X, Gap - 1, Gap + Lip);
+        // The controlled jump: it goes as the ground runs out and does its aiming
+        // in the air, by letting go.
+        Assert.InRange(RunUp(controller).X, Edge - 0.1, Edge);
+    }
+
+    [Fact]
+    public void ASprintingJumpLeavesAsLateAsItCan()
+    {
+        var controller = Leaping(out _, MovementMode.Sprint);
+
+        // The jump for distance: the player's feet still carry it a little way
+        // past the last block, and leaving from there spends the whole arc over
+        // the gap.
+        Assert.InRange(RunUp(controller).X, Edge + 0.2, Edge + 0.3);
+    }
+
+    [Fact]
+    public void AWalkingJumpLetsGoOnceItsMomentumCarriesIt()
+    {
+        var controller = Leaping(out _);
+
+        RunUp(controller);
+
+        // Moving at walking speed with half a block to go: well within what the
+        // speed alone carries, so pushing on would only overshoot.
+        var drifting = Ticking.At(
+            new Vector3d(_landing.X - 0.5, Ticking.FloorTop + 0.5, 0.5), new Vector3d(0.2158, 0, 0), onGround: false);
+
+        Assert.Null(controller.Tick(drifting).Direction);
     }
 
     [Fact]
@@ -53,11 +70,32 @@ public class JumpToTests
     {
         var controller = Leaping(out _);
 
-        RunUpTo(controller, _takeOff);
+        RunUp(controller);
 
-        var airborne = Ticking.At(new Vector3d(Gap + 0.2, Ticking.FloorTop + 0.42, 0.5), onGround: false);
+        Assert.False(controller.Tick(Airborne(Edge + 0.5)).Jump);
+    }
 
-        Assert.False(controller.Tick(airborne).Jump);
+    [Fact]
+    public void KeepsSteeringTowardsTheLandingInTheAir()
+    {
+        var controller = Leaping(out _);
+
+        RunUp(controller);
+
+        Assert.True(controller.Tick(Airborne(Edge + 0.5)).Direction!.X > 0);
+    }
+
+    [Fact]
+    public void BrakesWhenItOvershoots()
+    {
+        var controller = Leaping(out _, MovementMode.Sprint);
+
+        RunUp(controller);
+
+        // Aimed afresh each tick, the push turns round once the player is past
+        // the landing. That is what keeps a jump from carrying on off the far
+        // side, and it is why nothing here has to be timed.
+        Assert.True(controller.Tick(Airborne(_landing.X + 0.4)).Direction!.X < 0);
     }
 
     [Fact]
@@ -65,30 +103,29 @@ public class JumpToTests
     {
         var controller = Leaping(out var leap);
 
-        RunUpTo(controller, _takeOff);
+        RunUp(controller);
 
-        controller.Tick(Ticking.At(new Vector3d(5.8, Ticking.FloorTop + 0.8, 0.5), onGround: false));
-        controller.Tick(Ticking.At(new Vector3d(6.3, Ticking.FloorTop + 0.9, 0.5), onGround: false));
+        controller.Tick(Airborne(5.8));
+        controller.Tick(Airborne(6.3));
 
         Assert.False(leap.IsCompleted);
 
-        Land(controller, new Vector3d(6.8, Ticking.FloorTop, 0.5));
+        controller.Tick(Ticking.At(new Vector3d(6.6, Ticking.FloorTop, 0.5)));
 
         Assert.Equal(MovementResult.Arrived, await leap);
     }
 
     [Fact]
-    public async Task OvershootingTheLandingStillCountsAsAcross()
+    public async Task ComingDownOnTheNextBlockIsAMiss()
     {
         var controller = Leaping(out var leap);
 
-        RunUpTo(controller, _takeOff);
+        RunUp(controller);
+        Land(controller, new Vector3d(7.4, Ticking.FloorTop, 0.5));
 
-        // A jump cannot be made shorter once it has left the ground. Coming down
-        // past the block it was aimed at is still across.
-        Land(controller, new Vector3d(8.1, Ticking.FloorTop, 0.5));
-
-        Assert.Equal(MovementResult.Arrived, await leap);
+        // Unlike a drop, a jump is only planned where the landing itself is
+        // good; what lies past it is not something the route vouched for.
+        Assert.Equal(MovementResult.Blocked, await leap);
     }
 
     [Fact]
@@ -96,7 +133,7 @@ public class JumpToTests
     {
         var controller = Leaping(out var leap);
 
-        RunUpTo(controller, _takeOff);
+        RunUp(controller);
         Land(controller, new Vector3d(5.4, Ticking.FloorTop, 0.5));
 
         Assert.Equal(MovementResult.Blocked, await leap);
@@ -107,11 +144,11 @@ public class JumpToTests
     {
         var controller = Leaping(out var leap);
 
-        RunUpTo(controller, _takeOff);
+        RunUp(controller);
 
         // Far enough along, but at the bottom of the gap rather than on top of
         // the block.
-        Land(controller, new Vector3d(7.0, Ticking.FloorTop - 4, 0.5));
+        Land(controller, new Vector3d(6.5, Ticking.FloorTop - 4, 0.5));
 
         Assert.Equal(MovementResult.Blocked, await leap);
     }
@@ -121,73 +158,52 @@ public class JumpToTests
     {
         var controller = Leaping(out var leap);
 
-        RunUpTo(controller, _takeOff);
+        RunUp(controller);
         controller.Desynchronize();
 
         Assert.Equal(MovementResult.Desynced, await leap);
     }
 
     /// <summary>
-    /// A controller with a leap under way, run up to from <see cref="_start"/>.
+    /// A controller with a leap under way from <see cref="_start"/>.
     /// </summary>
     /// <remarks>
-    /// The tick beforehand is what tells the controller where the run-up starts,
-    /// which is what the direction of the whole jump is worked out from. In the
-    /// bot that is simply the last tick of the physics loop.
+    /// The tick beforehand tells the controller where the player is, as the
+    /// physics loop does in the bot.
     /// </remarks>
-    private static MovementController Leaping(out Task<MovementResult> leap)
+    private static MovementController Leaping(out Task<MovementResult> leap, MovementMode mode = MovementMode.Walk)
     {
-        var controller = Ticking.Controller(new Gapped(Gap, Gap));
+        var controller = Ticking.Controller();
 
         controller.Tick(Ticking.At(_start));
 
-        leap = controller.JumpTo(_takeOff, _landing);
+        leap = controller.JumpTo(_takeOff, _landing, mode);
 
         return controller;
     }
 
     /// <summary>
-    /// Walks east a step at a time until the controller calls for the jump.
+    /// Walks east a tenth of a block at a time until the controller jumps.
     /// </summary>
-    /// <remarks>
-    /// When exactly that happens is the controller's business, worked out by
-    /// playing the jump out against the world, so a test that named the tick
-    /// would be pinning down an answer rather than a question.
-    /// </remarks>
-    /// <returns>Where the player was standing when it went.</returns>
-    private static Vector3d RunUpTo(MovementController controller, Vector3d edge)
+    /// <returns>Where the player was when it went.</returns>
+    private static Vector3d RunUp(MovementController controller)
     {
-        var position = _start;
-
-        while (position.X <= edge.X + Lip)
-        {
+        for (var position = _start; position.X < Edge + 1; position = position with { X = position.X + 0.1 })
             if (controller.Tick(Ticking.At(position)).Jump)
                 return position;
 
-            position = position with { X = position.X + 0.2 };
-        }
+        Assert.Fail("never took off");
 
-        Assert.Fail($"never took off on the way to x = {edge.X + Lip:F1}");
-
-        return position;
+        return _start;
     }
 
-    /// <summary>
-    /// Flies the player to a point and puts it back on the ground there.
-    /// </summary>
-    /// <remarks>
-    /// The tick in the air is not decoration. A leap ends on having come back
-    /// down, which is a different thing from standing still -- otherwise a jump
-    /// that never left the ground would report itself landed on the spot. So the
-    /// player has to have been airborne for a landing to be one. The two ticks
-    /// after it are the phase that was still steering and the coast behind it,
-    /// each of which gets a tick of its own.
-    /// </remarks>
+    private static MovementState Airborne(double x)
+        => Ticking.At(new Vector3d(x, Ticking.FloorTop + 0.8, 0.5), onGround: false);
+
+    /// <summary>Flies the player to a point and puts it down there.</summary>
     private static void Land(MovementController controller, Vector3d position)
     {
-        controller.Tick(Ticking.At(position with { Y = position.Y + 1 }, onGround: false));
-
-        controller.Tick(Ticking.At(position));
+        controller.Tick(Airborne(position.X));
         controller.Tick(Ticking.At(position));
     }
 }

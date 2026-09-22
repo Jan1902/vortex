@@ -13,9 +13,9 @@ namespace Vortex.Modules.Player.Abstraction;
 /// belongs above it.
 /// </para>
 /// <para>
-/// The named movements are the ones that need the physics to be timed properly,
-/// which is why they live here rather than being assembled by every caller.
-/// Anything else is an <see cref="Execute"/> of a plan the caller builds itself.
+/// Every movement steers towards its destination afresh each tick, so none of
+/// them needs to be aimed precisely. What differs between them is when to jump
+/// and what counts as having made it.
 /// </para>
 /// </remarks>
 public interface IMovementController
@@ -59,7 +59,9 @@ public interface IMovementController
     /// </summary>
     /// <remarks>
     /// The fall is part of the movement rather than something to wait out
-    /// afterwards, so whatever comes next is decided from solid ground.
+    /// afterwards, so whatever comes next is decided from solid ground. Landing
+    /// one block further on, at the same height, still counts: a fall cannot be
+    /// stopped once it has started.
     /// </remarks>
     /// <param name="target">The centre of the block to land on.</param>
     /// <param name="mode">How to walk up to the edge.</param>
@@ -83,17 +85,6 @@ public interface IMovementController
     /// Whether the player got across, or came down somewhere else.
     /// </returns>
     Task<MovementResult> JumpTo(Vector3d takeOff, Vector3d landing, MovementMode mode = MovementMode.Walk);
-
-    /// <summary>
-    /// Carries out a movement the caller has built itself.
-    /// </summary>
-    /// <remarks>
-    /// The way in for anything the named movements do not cover. A plan is a
-    /// short sequence of directions to hold and moments to let go of them, so
-    /// this is how a new kind of movement gets tried without anything here
-    /// having to learn about it.
-    /// </remarks>
-    Task<MovementResult> Execute(MovementPlan plan);
 
     /// <summary>
     /// Jumps once, if the player is on the ground.

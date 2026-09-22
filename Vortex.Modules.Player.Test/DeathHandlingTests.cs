@@ -52,15 +52,11 @@ public class DeathHandlingTests
         var networking = new FakeNetworking();
         var configuration = new VortexClientConfiguration { AutoRespawn = autoRespawn };
 
-        var physics = new PlayerPhysics(new EmptyWorld());
-
         var player = new PlayerManager(
             NullLogger<PlayerManager>.Instance,
             networking,
-            physics,
-            new MovementController(
-                new MovementPlans(new MovementSimulator(physics)),
-                NullLogger<MovementController>.Instance));
+            new PlayerPhysics(new EmptyWorld()),
+            new MovementController(NullLogger<MovementController>.Instance));
 
         var handler = new PlayerPacketHandler(
             NullLogger<PlayerPacketHandler>.Instance,

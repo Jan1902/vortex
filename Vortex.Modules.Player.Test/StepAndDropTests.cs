@@ -22,7 +22,7 @@ public class StepAndDropTests
     public async Task StepsUpOntoABlockOneHigher()
     {
         var world = Raised(by: 1);
-        var controller = Ticking.Controller(world);
+        var controller = Ticking.Controller();
 
         var start = Ticking.At(new Vector3d(2.5, 64, 0.5));
         controller.Tick(start);
@@ -43,7 +43,7 @@ public class StepAndDropTests
         // Three blocks is a wall, not a step. Walking into it and hoping is what
         // the old flag did; saying so is what a movement of its own can do.
         var world = Raised(by: 3);
-        var controller = Ticking.Controller(world);
+        var controller = Ticking.Controller();
 
         var start = Ticking.At(new Vector3d(2.5, 64, 0.5));
         controller.Tick(start);
@@ -56,34 +56,61 @@ public class StepAndDropTests
     }
 
     [Theory]
-    [InlineData(1)]
-    [InlineData(3)]
-    public async Task DropsOffALedgeOntoTheBlockBelow(int height)
+    [InlineData(1, MovementMode.Walk)]
+    [InlineData(2, MovementMode.Walk)]
+    [InlineData(3, MovementMode.Walk)]
+    [InlineData(1, MovementMode.Sprint)]
+    [InlineData(3, MovementMode.Sprint)]
+    public async Task DropsOffALedgeOntoTheBlockBelowOrTheOneAfter(int height, MovementMode mode)
     {
-        var world = Lowered(by: height);
-        var controller = Ticking.Controller(world);
-
-        var start = Ticking.At(new Vector3d(2.5, 64, 0.5));
-        controller.Tick(start);
-
         var floor = 64 - height;
-        var dropped = controller.DropTo(new Vector3d(Ledge + 0.5, floor, 0.5));
 
-        var ended = Ticking.Walk(controller, world, start, dropped);
+        // From the middle of the last block, where a route starts a drop, from
+        // on the lip itself, and from a spread of spots in between.
+        var starts = Enumerable.Range(0, 20).Select(i => Ledge - 0.5 - i * 0.05)
+            .Concat([Ledge - 0.1, Ledge + 0.1, Ledge + 0.25]);
 
-        Assert.Equal(MovementResult.Arrived, await dropped);
-        Assert.Equal(floor, ended.Position.Y, precision: 3);
+        foreach (var x in starts)
+        {
+            var world = Lowered(by: height);
+            var controller = Ticking.Controller();
 
-        // The fall is taken straight down rather than steered through: pushing
-        // in mid-air would only carry the player past the block it was aimed at.
-        Assert.InRange(ended.Position.X, Ledge, Ledge + 1);
+            var start = Ticking.At(new Vector3d(x, 64, 0.5));
+            controller.Tick(start);
+
+            var dropped = controller.DropTo(new Vector3d(Ledge + 0.5, floor, 0.5), mode);
+            var ended = Ticking.Walk(controller, world, start, dropped);
+
+            Assert.Equal(MovementResult.Arrived, await dropped);
+            Assert.Equal(floor, ended.Position.Y, precision: 3);
+
+            // Letting go before the edge puts it on the block below; a fall
+            // cannot be stopped once it is going, so the next one along is as
+            // near as it can be promised.
+            Assert.InRange(ended.Position.X, Ledge, Ledge + 2);
+        }
+    }
+
+    [Fact]
+    public async Task ADropThatComesDownTwoBlocksOutHasMissed()
+    {
+        var controller = Ticking.Controller();
+
+        controller.Tick(Ticking.At(new Vector3d(Ledge - 0.5, 64, 0.5)));
+
+        var dropped = controller.DropTo(new Vector3d(Ledge + 0.5, 63, 0.5));
+
+        controller.Tick(Ticking.At(new Vector3d(Ledge + 1.5, 63.5, 0.5), onGround: false));
+        controller.Tick(Ticking.At(new Vector3d(Ledge + 2.5, 63, 0.5)));
+
+        Assert.Equal(MovementResult.Blocked, await dropped);
     }
 
     [Fact]
     public void ADropEndsOnTheGroundRatherThanInTheAir()
     {
         var world = Lowered(by: 3);
-        var controller = Ticking.Controller(world);
+        var controller = Ticking.Controller();
 
         var start = Ticking.At(new Vector3d(2.5, 64, 0.5));
         controller.Tick(start);

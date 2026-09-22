@@ -10,22 +10,21 @@ namespace Vortex.Modules.Player.Test;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The pathfinder plans jumps it can never try, from a table it cannot check.
-/// These tests are what holds the two together: every gap
-/// <see cref="JumpReach"/> promises is jumped here, with the real controller
-/// deciding when to leave the ground and the real physics deciding where that
-/// puts the player. If the physics ever stops carrying that far, this fails
-/// here rather than dropping the bot into a hole out there.
+/// The pathfinder plans jumps from a table it cannot check. These tests are what
+/// holds the two together: every gap <see cref="JumpReach"/> promises is jumped
+/// here, with the real controller and the real physics, and it has to come down
+/// on the block it was aimed at. If a jump ever stops carrying that far, this
+/// fails here rather than dropping the bot into a hole out there.
 /// </para>
 /// <para>
-/// The other direction is checked too. A table that undersells the physics
-/// costs the bot routes it could have walked, so each promise is also the last
-/// one that works.
+/// Each jump starts where a route starts it -- standing in the middle of the
+/// last block -- and from twenty slightly different spots around there, so that
+/// a promise cannot hold only because the ticks happened to fall well.
 /// </para>
 /// </remarks>
 public class JumpReachTests
 {
-    /// <summary>Every jump the search is allowed to plan.</summary>
+    /// <summary>Every kind of jump the search is allowed to plan.</summary>
     public static TheoryData<bool, int> Planned()
     {
         var data = new TheoryData<bool, int>();
@@ -43,53 +42,54 @@ public class JumpReachTests
     {
         var widest = JumpReach.WidestGap(sprinting, rise);
 
-        Assert.True(widest > 0, $"nothing planned for {Describe(sprinting, rise)}");
+        // A sprint is only planned where walking falls short, so that is all it
+        // has to be good for.
+        var narrowest = sprinting ? JumpReach.WidestGap(sprinting: false, rise) + 1 : 1;
 
-        for (var gap = 1; gap <= widest; gap++)
+        for (var gap = narrowest; gap <= widest; gap++)
             Assert.True(
-                Clears(gap, rise, sprinting),
-                $"a {gap} block gap should be clearable {Describe(sprinting, rise)}");
+                FromEverywhere(gap, rise, sprinting),
+                $"a {gap} block gap should be cleared {Describe(sprinting, rise)}");
     }
 
     [Theory]
     [MemberData(nameof(Planned))]
-    public void DoesNotPretendToClearWhatItCannot(bool sprinting, int rise)
+    public void DoesNotPromiseMoreThanItDoes(bool sprinting, int rise)
     {
         var widest = JumpReach.WidestGap(sprinting, rise);
 
-        // If this ever starts failing, the physics got better and the table is
+        // If this ever starts failing, the jump got better and the table is
         // leaving reach on the table.
         Assert.False(
-            Clears(widest + 1, rise, sprinting),
+            FromEverywhere(widest + 1, rise, sprinting),
             $"a {widest + 1} block gap is promised to be out of reach {Describe(sprinting, rise)}");
     }
 
     [Fact]
     public void FallingBuysDistance()
     {
-        // More time in the air is more ground covered, which is why the table
-        // is not one number. A jump down carries further than one across, and
-        // one across further than a jump up.
+        // More time in the air is more ground covered, which is why the table is
+        // not one number.
         Assert.True(JumpReach.WidestGap(sprinting: true, -2) > JumpReach.WidestGap(sprinting: true, 1));
     }
 
     private static string Describe(bool sprinting, int rise)
         => $"{(sprinting ? "sprinting" : "walking")}, landing {rise:+#;-#;level} block(s)";
 
+    /// <summary>Whether a jump lands from each of twenty starting spots.</summary>
+    private static bool FromEverywhere(int gap, int rise, bool sprinting)
+        => Enumerable.Range(0, 20).All(i => Lands(gap, rise, sprinting, -0.5 - i * 0.05));
+
     /// <summary>
-    /// Runs east along a floor that stops at x = 0, leaps a gap of a given
-    /// width, and says whether the player ended up on the far side.
+    /// Jumps east from a floor that stops at x = 0 across a gap of a given
+    /// width, and says whether the player came down on the block it aimed at.
     /// </summary>
-    /// <remarks>
-    /// The whole movement, not just the arc: where to take off from is the
-    /// controller's decision and a real part of how far a jump reaches.
-    /// </remarks>
-    private static bool Clears(int gap, int rise, bool sprinting)
+    private static bool Lands(int gap, int rise, bool sprinting, double startX)
     {
         var world = new Terrain(x => x < 0 ? 63 : x < gap ? null : 63 + rise);
-        var controller = Ticking.Controller(world);
+        var controller = Ticking.Controller();
 
-        var start = Ticking.At(new Vector3d(-6.5, 64, 0.5));
+        var start = Ticking.At(new Vector3d(startX, 64, 0.5));
         controller.Tick(start);
 
         var leap = controller.JumpTo(

@@ -13,10 +13,15 @@ namespace Vortex.Modules.Navigation.Abstraction;
 /// as it says here, that test fails rather than the bot dropping into a hole.
 /// </para>
 /// <para>
-/// Measured over flat ground with a clear run-up, which is what the search
-/// checks for anyway. Falling buys distance -- there is more time in the air --
-/// so a jump down carries further than a jump across, and a jump up carries
-/// least of all.
+/// Measured from where a route actually starts a jump: standing in the middle of
+/// the last block, with no run-up to speak of. Falling buys distance -- there is
+/// more time in the air -- so a jump down carries further than a jump across,
+/// and a jump up carries least of all.
+/// </para>
+/// <para>
+/// Sprinting is only planned where walking falls short. A walking jump lets go
+/// in mid-air to land where it was aimed; a sprinting one pushes all the way for
+/// distance and would overshoot a gap walking could have handled.
 /// </para>
 /// </remarks>
 public static class JumpReach
@@ -65,13 +70,14 @@ public static class JumpReach
         => (sprinting, heightChange) switch
         {
             // Rising eats the arc: the player is still climbing where it would
-            // otherwise be travelling, and sprinting buys nothing back.
-            (_, 1) => 2,
+            // otherwise be travelling.
+            (false, 1) => 1,
+            (true, 1) => 2,
 
             (false, 0) => 2,
             (true, 0) => 3,
 
-            (false, -1) => 3,
+            (false, -1) => 2,
             (true, -1) => 3,
 
             (false, -2) => 3,

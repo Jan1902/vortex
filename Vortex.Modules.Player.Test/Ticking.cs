@@ -26,22 +26,9 @@ internal static class Ticking
     public static MovementState At(Vector3d position, Vector3d velocity, bool onGround)
         => new(position, velocity, onGround, Blocked: false);
 
-    /// <summary>
-    /// A controller wired up the way the bot wires it, over a given world.
-    /// </summary>
-    /// <remarks>
-    /// The world is not decoration. Deciding when to take off means playing the
-    /// jump out against it, so a controller with nothing under it would think
-    /// every jump misses.
-    /// </remarks>
-    public static MovementController Controller(IWorldManager world)
-        => new(
-            new MovementPlans(new MovementSimulator(new PlayerPhysics(world))),
-            NullLogger<MovementController>.Instance);
-
-    /// <summary>A controller over endless flat ground.</summary>
+    /// <summary>A controller the way the bot wires it.</summary>
     public static MovementController Controller()
-        => Controller(new Gapped(gapFrom: 0, gapTo: -1));
+        => new(NullLogger<MovementController>.Instance);
 
     /// <summary>
     /// Runs a movement to its end, driving the real physics with the real

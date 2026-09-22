@@ -69,7 +69,7 @@ public class MovementControllerTests
 
         // Making ground the whole time, so nothing reads as stuck -- but a
         // thousand blocks is not one movement, and something has to end it.
-        for (var tick = 0; tick <= MovementPlan.DefaultTimeout && !movement.IsCompleted; tick++)
+        for (var tick = 0; tick <= MovementController.Timeout + 1 && !movement.IsCompleted; tick++)
         {
             controller.Tick(Ticking.At(position));
             position = position with { X = position.X + 0.2 };
