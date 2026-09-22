@@ -48,6 +48,12 @@ public interface IMinecraftBinaryWriter : IDisposable
     void WriteFloat(float value);
 
     /// <summary>
+    /// Writes an angle as a single byte in steps of 1/256 of a full turn.
+    /// </summary>
+    /// <param name="degrees">The angle in degrees; any value, it wraps around.</param>
+    void WriteAngle(float degrees);
+
+    /// <summary>
     /// Writes an integer value to the underlying stream.
     /// </summary>
     /// <param name="value">The integer value to write.</param>

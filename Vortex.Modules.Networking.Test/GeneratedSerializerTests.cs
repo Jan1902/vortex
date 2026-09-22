@@ -36,6 +36,7 @@ public record AllShapes(
     [BitField] SampleFlags Flags,
     [OverwriteType(OverwriteType.Int)] int FixedWidth,
     [OverwriteType(OverwriteType.VarLong)] long Packed,
+    [OverwriteType(OverwriteType.Angle)] float Heading,
     SampleMode[] Modes,
     string[] Names,
     byte[] Payload,
@@ -67,6 +68,7 @@ public class GeneratedSerializerTests
             Flags: SampleFlags.First | SampleFlags.Second,
             FixedWidth: -5,
             Packed: 1L << 40,
+            Heading: 90f,
             Modes: [SampleMode.Idle, SampleMode.Running],
             Names: ["a", "bc"],
             Payload: [1, 2, 3],
@@ -91,6 +93,7 @@ public class GeneratedSerializerTests
         Assert.Equal(original.Flags, copy.Flags);
         Assert.Equal(original.FixedWidth, copy.FixedWidth);
         Assert.Equal(original.Packed, copy.Packed);
+        Assert.Equal(original.Heading, copy.Heading);
         Assert.Equal(original.Modes, copy.Modes);
         Assert.Equal(original.Names, copy.Names);
         Assert.Equal(original.Payload, copy.Payload);
@@ -112,7 +115,7 @@ public class GeneratedSerializerTests
     public void RoundTripsAbsentConditionals()
     {
         var original = new AllShapes(
-            0, 0, "", Guid.Empty, Vector3i.Zero, false, SampleMode.Idle, SampleFlags.None, 0, 0,
+            0, 0, "", Guid.Empty, Vector3i.Zero, false, SampleMode.Idle, SampleFlags.None, 0, 0, 0f,
             [], [], [], [0, 0, 0, 0], new bool[10],
             OptionalNumber: null, OptionalText: null, OptionalNested: null,
             new SampleNested("", null), 0, 0);

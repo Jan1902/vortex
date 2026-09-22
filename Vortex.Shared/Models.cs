@@ -41,6 +41,15 @@ public record Vector3d(double X, double Y, double Z)
     public Vector3i ToBlockPosition()
         => new((int)Math.Floor(X), (int)Math.Floor(Y), (int)Math.Floor(Z));
 
+    public double DistanceTo(Vector3d other)
+    {
+        var dx = X - other.X;
+        var dy = Y - other.Y;
+        var dz = Z - other.Z;
+
+        return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
     public double HorizontalDistanceTo(Vector3d other)
     {
         var dx = X - other.X;

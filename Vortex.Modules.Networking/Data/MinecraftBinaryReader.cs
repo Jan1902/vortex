@@ -54,6 +54,9 @@ public class MinecraftBinaryReader(Stream stream) : IMinecraftBinaryReader
     public float ReadFloat()
         => _bitConverter.ToSingle(ReadBytes(sizeof(float)), 0);
 
+    public float ReadAngle()
+        => ReadByte() * 360f / 256f;
+
     public double ReadDouble()
         => _bitConverter.ToDouble(ReadBytes(sizeof(double)), 0);
 

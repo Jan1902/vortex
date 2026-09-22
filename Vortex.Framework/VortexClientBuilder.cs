@@ -5,6 +5,7 @@ using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Chat;
+using Vortex.Modules.Entities;
 using Vortex.Modules.Navigation;
 using Vortex.Modules.Networking;
 using Vortex.Modules.Player;
@@ -24,6 +25,7 @@ public class VortexClientBuilder
             typeof(ChatModule),
             typeof(PlayerModule),
             typeof(WorldModule),
+            typeof(EntitiesModule),
             typeof(NavigationModule),
             typeof(BehaviourModule)
         ];

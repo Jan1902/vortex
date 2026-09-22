@@ -55,6 +55,9 @@ public class MinecraftBinaryWriter(Stream stream) : IMinecraftBinaryWriter
     public void WriteFloat(float value)
         => WriteBytes(_bitConverter.GetBytes(value));
 
+    public void WriteAngle(float degrees)
+        => WriteByte((byte)(int)MathF.Round(degrees * 256f / 360f));
+
     public void WriteDouble(double value)
         => WriteBytes(_bitConverter.GetBytes(value));
 

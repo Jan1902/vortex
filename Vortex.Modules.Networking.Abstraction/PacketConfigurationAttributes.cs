@@ -159,7 +159,10 @@ public enum OverwriteType
     Int,
 
     /// <summary>A variable length long, as the entries of a packed array are.</summary>
-    VarLong
+    VarLong,
+
+    /// <summary>A rotation in 1/256 steps of a full turn, read into a <c>float</c> in degrees.</summary>
+    Angle
 }
 
 /// <summary>

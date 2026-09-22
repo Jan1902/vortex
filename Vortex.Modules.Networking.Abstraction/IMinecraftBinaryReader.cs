@@ -39,6 +39,12 @@ public interface IMinecraftBinaryReader : IDisposable
     float ReadFloat();
 
     /// <summary>
+    /// Reads an angle, sent as a single byte in steps of 1/256 of a full turn.
+    /// </summary>
+    /// <returns>The angle in degrees, from 0 up to but excluding 360.</returns>
+    float ReadAngle();
+
+    /// <summary>
     /// Reads an integer value from the binary stream.
     /// </summary>
     /// <returns>The integer value read from the stream.</returns>

@@ -1,6 +1,7 @@
 ﻿using Vortex.Data;
 using Vortex.Shared;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Entities.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 
 namespace Vortex.Framework.Abstraction;
@@ -65,6 +66,11 @@ public interface IVortexClient
     /// movements.
     /// </summary>
     IBotBrain Brain { get; }
+
+    /// <summary>
+    /// Gets the entities around the bot: players, mobs, items on the ground.
+    /// </summary>
+    IEntityManager Entities { get; }
 
     /// <summary>
     /// Event that is raised when a chat message is received.
