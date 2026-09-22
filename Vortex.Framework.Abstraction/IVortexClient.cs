@@ -21,6 +21,12 @@ public interface IVortexClient
     Task StartAsync();
 
     /// <summary>
+    /// Stops the client: cancels whatever the brain is running and disconnects
+    /// from the server.
+    /// </summary>
+    Task StopAsync();
+
+    /// <summary>
     /// Sends a chat message.
     /// </summary>
     /// <param name="message">The message to send.</param>

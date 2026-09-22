@@ -93,6 +93,7 @@ public class CraftingTests
     {
         public Task Connect() => Task.CompletedTask;
         public Task ConnectAndWaitForPlay() => Task.CompletedTask;
+        public Task Disconnect() => Task.CompletedTask;
         public Task SendPacket(PacketBase packet) => Task.CompletedTask;
     }
 }

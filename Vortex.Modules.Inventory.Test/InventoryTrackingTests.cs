@@ -115,6 +115,7 @@ internal class NoNetworking : Vortex.Modules.Networking.Abstraction.INetworkingM
     public Task Connect() => Task.CompletedTask;
 
     public Task ConnectAndWaitForPlay() => Task.CompletedTask;
+    public Task Disconnect() => Task.CompletedTask;
 
     public Task SendPacket(Vortex.Modules.Networking.Abstraction.PacketBase packet)
     {

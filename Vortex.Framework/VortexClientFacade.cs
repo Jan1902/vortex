@@ -54,6 +54,15 @@ internal class VortexClientFacade(
         await connection.ConnectAndWaitForPlay();
     }
 
+    public async Task StopAsync()
+    {
+        logger.LogInformation("Stopping Vortex client...");
+
+        brain.Cancel();
+
+        await connection.Disconnect();
+    }
+
     private void SetupEventPassThroughs()
     {
         eventBus.RegisterProxyHandler<ChatMessageReceivedEvent, ChatMessageReceivedEventArgs>(ChatMessageReceived, (e) => new(

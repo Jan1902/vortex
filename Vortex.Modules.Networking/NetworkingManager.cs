@@ -26,4 +26,7 @@ internal class NetworkingManager(NetworkingConnection connection) : INetworkingM
 
     public Task SendPacket(PacketBase packet)
         => connection.SendPacket(packet);
+
+    public Task Disconnect()
+        => connection.Disconnect();
 }

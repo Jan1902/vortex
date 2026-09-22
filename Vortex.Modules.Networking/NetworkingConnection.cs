@@ -32,6 +32,9 @@ internal class NetworkingConnection(
     /// </summary>
     private readonly SemaphoreSlim _sendLock = new(1, 1);
 
+    /// <summary>Set once the client closes the connection itself, which is then no error.</summary>
+    private volatile bool _disconnecting;
+
     public async Task Connect()
     {
         if (configuration.Hostname == default
@@ -57,9 +60,31 @@ internal class NetworkingConnection(
         await eventBus.PublishAsync(new ConnectionEstablishedEvent());
     }
 
+    public async Task Disconnect()
+    {
+        if (_disconnecting || !_socket.Connected)
+            return;
+
+        _disconnecting = true;
+
+        // Wait for a send in progress, so no frame is cut off half way.
+        await _sendLock.WaitAsync();
+        try
+        {
+            _socket.Shutdown(SocketShutdown.Both);
+            _socket.Close();
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+
+        logger.LogInformation("Disconnected from the server");
+    }
+
     public async Task SendPacket(PacketBase packet)
     {
-        if (!_socket.Connected)
+        if (_disconnecting || !_socket.Connected)
             return;
 
         var opCode = packetSerializer.GetOpCode(packet.GetType());
@@ -98,7 +123,8 @@ internal class NetworkingConnection(
 
         await Task.WhenAll(FillPipe(pipe.Writer), ReadPipe(pipe.Reader));
 
-        logger.LogWarning("Connection to server has been terminated");
+        if (!_disconnecting)
+            logger.LogWarning("Connection to server has been terminated");
     }
 
     private async Task FillPipe(PipeWriter writer)
@@ -116,7 +142,9 @@ internal class NetworkingConnection(
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error receiving data from server");
+                if (!_disconnecting)
+                    logger.LogError(e, "Error receiving data from server");
+
                 break;
             }
 

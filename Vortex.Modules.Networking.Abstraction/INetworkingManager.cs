@@ -23,4 +23,9 @@ public interface INetworkingManager
     /// <param name="packet">The packet to send.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task SendPacket(PacketBase packet);
+
+    /// <summary>
+    /// Closes the connection to the server. Nothing is sent or received after.
+    /// </summary>
+    Task Disconnect();
 }
