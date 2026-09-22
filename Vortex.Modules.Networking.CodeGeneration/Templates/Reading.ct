@@ -1,0 +1,36 @@
+## Read
+{{cast}}reader.Read{{method}}()
+
+## ReadModel
+new {{serializer}}().DeserializeModel(reader)
+
+## Assign
+{{target}} = {{value}};
+
+## ReadBitSet
+{{target}} = reader.ReadBitSet({{length}});
+
+## ReadLengthPrefix
+var {{variable}}Length = reader.ReadVarInt();
+
+## ReadBytes
+{{lengthPrefix}}
+{{target}} = reader.ReadBytes({{length}});
+
+## ReadArray
+{{lengthPrefix}}
+{{target}} = new {{elementType}}[{{length}}];
+for (var i = 0; i < {{variable}}.Length; i++)
+{
+    {{variable}}[i] = {{value}};
+}
+
+## ReadConditional
+{{type}}? {{variable}} = null;
+if (reader.ReadBool())
+{
+    {{content}}
+}
+
+## Construct
+return new {{type}}({{arguments}});

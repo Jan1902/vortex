@@ -1,0 +1,33 @@
+## Write
+writer.Write{{method}}({{cast}}{{value}});
+
+## WriteModel
+new {{serializer}}().SerializeModel({{value}}, writer);
+
+## WriteBitSet
+writer.WriteBitSet({{value}});
+
+## WriteLengthPrefix
+writer.WriteVarInt({{value}}.Length);
+
+## WriteBytes
+{{lengthPrefix}}
+writer.WriteBytes({{value}});
+
+## WriteArray
+{{lengthPrefix}}
+foreach (var item in {{value}})
+{
+    {{content}}
+}
+
+## WriteConditional
+if ({{value}} is { } {{local}})
+{
+    writer.WriteBool(true);
+    {{content}}
+}
+else
+{
+    writer.WriteBool(false);
+}

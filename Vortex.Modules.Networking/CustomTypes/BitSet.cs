@@ -16,9 +16,10 @@ internal static class BitSet
     public static bool[] ReadBitSetFromStream(Stream stream, int length)
     {
         var bytes = new byte[(int)Math.Ceiling(length / 8d)];
-        stream.Read(bytes, 0, bytes.Length);
+        stream.ReadExactly(bytes);
 
-        var bitArray = new BitArray(bytes);
+        // The bytes carry up to seven padding bits beyond the set's own length.
+        var bitArray = new BitArray(bytes) { Length = length };
         var resultArray = new bool[length];
         bitArray.CopyTo(resultArray, 0);
 

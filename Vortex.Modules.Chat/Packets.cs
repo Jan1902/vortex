@@ -19,4 +19,4 @@ public record PlayerChatMessage(Guid Sender, int Index, [Conditional][Length(256
 public record CommandsPacket : PacketBase;
 
 [AutoSerializedPacket(PacketIds.Play.ClientBound.DisguisedChat)]
-public record DisguisedChatMessage(NbtTag Message, int ChatType, NbtTag SenderName, [Conditional] NbtTag TargetName) : PacketBase;
+public record DisguisedChatMessage(NbtTag Message, int ChatType, NbtTag SenderName, [Conditional] NbtTag? TargetName) : PacketBase;
