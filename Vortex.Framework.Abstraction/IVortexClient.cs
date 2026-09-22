@@ -2,6 +2,7 @@
 using Vortex.Shared;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Entities.Abstraction;
+using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 
@@ -77,6 +78,11 @@ public interface IVortexClient
     /// Gets the inventory, and whatever container is open on top of it.
     /// </summary>
     IInventoryManager Inventory { get; }
+
+    /// <summary>
+    /// Gets the acts on the world: using items on blocks, using items, swinging.
+    /// </summary>
+    IInteractionManager Interaction { get; }
 
     /// <summary>
     /// Event that is raised when a chat message is received.

@@ -19,5 +19,6 @@ public class BehaviourModule : IModule
         builder.RegisterType<WithinReachTask>().AsSelf();
         builder.RegisterType<GoToTask>().AsSelf();
         builder.RegisterType<CollectItemsTask>().AsSelf();
+        builder.RegisterType<UseBlockTask>().AsSelf();
     }
 }

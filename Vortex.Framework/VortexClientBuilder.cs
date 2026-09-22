@@ -6,6 +6,7 @@ using Vortex.Modules.Behaviour;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Chat;
 using Vortex.Modules.Entities;
+using Vortex.Modules.Interaction;
 using Vortex.Modules.Inventory;
 using Vortex.Modules.Navigation;
 using Vortex.Modules.Networking;
@@ -28,6 +29,7 @@ public class VortexClientBuilder
             typeof(WorldModule),
             typeof(EntitiesModule),
             typeof(InventoryModule),
+            typeof(InteractionModule),
             typeof(NavigationModule),
             typeof(BehaviourModule)
         ];
