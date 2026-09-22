@@ -1,5 +1,5 @@
 using Vortex.Bot.Commands.Infrastructure;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Container;
 using Vortex.Shared;
 
 namespace Vortex.Bot.Commands.Items;

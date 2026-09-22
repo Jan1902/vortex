@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Knowledge;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Items;
 
 namespace Vortex.Modules.Behaviour.Test;
 

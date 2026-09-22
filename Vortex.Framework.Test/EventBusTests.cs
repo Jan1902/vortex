@@ -124,6 +124,42 @@ public class EventBusTests
         Assert.Equal(["one", "two"], order);
     }
 
+    [Fact]
+    public async Task ReachesAHandlerThatIsAlsoRegisteredAsItsOwnClass()
+    {
+        // Registered as itself too, so that others can ask it things. Its class
+        // then shows up among the services next to the handler interface, and
+        // must not be mistaken for one.
+        var builder = new ContainerBuilder();
+
+        builder.Register(c => new EventBus(c.Resolve<IComponentContext>(), NullLogger<EventBus>.Instance))
+            .AsSelf()
+            .SingleInstance();
+
+        builder.RegisterType<SelfRegisteredHandler>().AsSelf().AsImplementedInterfaces().SingleInstance();
+
+        using var container = builder.Build();
+        var bus = container.Resolve<EventBus>();
+
+        bus.Initialize();
+
+        await bus.PublishAsync(new TestEvent("hello"));
+
+        Assert.Equal(["hello"], container.Resolve<SelfRegisteredHandler>().Seen);
+    }
+
+    private class SelfRegisteredHandler : IEventHandler<TestEvent>
+    {
+        public List<string> Seen { get; } = [];
+
+        public Task HandleAsync(TestEvent @event)
+        {
+            Seen.Add(@event.Message);
+
+            return Task.CompletedTask;
+        }
+    }
+
     private static EventBus Create()
     {
         var builder = new ContainerBuilder();

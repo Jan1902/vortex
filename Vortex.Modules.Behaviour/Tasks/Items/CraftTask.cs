@@ -1,13 +1,16 @@
 using Microsoft.Extensions.Logging;
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Behaviour.Tasks.Blocks;
+using Vortex.Modules.Behaviour.Tasks.Container;
+using Vortex.Modules.Behaviour.Tasks.Helper;
 using Vortex.Modules.Crafting.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Items;
 
 /// <summary>
 /// Crafts an item until the bot carries a number of it.

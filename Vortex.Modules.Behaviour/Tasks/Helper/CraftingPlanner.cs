@@ -1,7 +1,7 @@
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Helper;
 
 /// <summary>
 /// Decides how to craft an item: which recipe, and what it takes.

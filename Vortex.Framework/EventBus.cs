@@ -38,7 +38,10 @@ internal class EventBus(IComponentContext context, ILogger<EventBus> logger) : I
             .SelectMany(r => r.Services)
             .Where(s => s is IServiceWithType)
             .Select(s => ((IServiceWithType)s).ServiceType)
-            .Where(t => t.IsClosedTypeOf(typeof(IEventHandler<>)))
+            // The handler interfaces themselves, not every service that happens
+            // to implement one: a handler also registered as its own class
+            // would otherwise count as a handler type with no event to it.
+            .Where(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IEventHandler<>))
             // Distinct, because the same handler interface shows up once per
             // registration that offers it. Without this, every handler for an
             // event with two handlers registered would be invoked twice.

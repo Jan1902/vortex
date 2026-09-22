@@ -1,13 +1,15 @@
 using Microsoft.Extensions.Logging;
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Behaviour.Tasks.Helper;
+using Vortex.Modules.Behaviour.Tasks.Navigation;
 using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Blocks;
 
 /// <summary>
 /// Places a block from the inventory at a position.

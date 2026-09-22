@@ -3,7 +3,7 @@ using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Navigation;
 
 /// <summary>
 /// Gets close enough to a block to do something with it.

@@ -1,6 +1,6 @@
 using Vortex.Modules.Inventory.Abstraction;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Helper;
 
 /// <summary>
 /// Gets an item into the main hand before acting with it.

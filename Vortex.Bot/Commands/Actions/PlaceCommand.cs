@@ -1,7 +1,7 @@
 using Vortex.Bot.Commands.Infrastructure;
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Blocks;
 using Vortex.Shared;
 
 namespace Vortex.Bot.Commands.Actions;

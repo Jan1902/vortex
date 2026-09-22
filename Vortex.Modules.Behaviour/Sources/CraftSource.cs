@@ -1,6 +1,7 @@
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Helper;
+using Vortex.Modules.Behaviour.Tasks.Items;
 using Vortex.Modules.Inventory.Abstraction;
 
 namespace Vortex.Modules.Behaviour.Sources;

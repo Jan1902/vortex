@@ -4,7 +4,7 @@ using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Navigation;
 
 /// <summary>
 /// Stands on a particular block, walking there around whatever is in the way.

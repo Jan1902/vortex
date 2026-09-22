@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Vortex.Data;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Entities;
+using Vortex.Modules.Behaviour.Tasks.Navigation;
 using Vortex.Modules.Entities.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Navigation.Abstraction;

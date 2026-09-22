@@ -3,7 +3,7 @@ using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Knowledge;
 using Vortex.Modules.Inventory.Abstraction;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Items;
 
 /// <summary>
 /// Carries a number of items, from wherever they can be had.

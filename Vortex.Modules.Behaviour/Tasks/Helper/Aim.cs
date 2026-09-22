@@ -2,7 +2,7 @@ using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Helper;
 
 /// <summary>
 /// Turns the bot towards a block before acting on it.

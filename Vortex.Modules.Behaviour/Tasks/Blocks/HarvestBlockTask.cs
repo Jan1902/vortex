@@ -1,10 +1,12 @@
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Behaviour.Tasks.Helper;
+using Vortex.Modules.Behaviour.Tasks.Items;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Blocks;
 
 /// <summary>
 /// Breaks a block and picks up what it drops.

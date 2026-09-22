@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Vortex.Modules.Behaviour.Abstraction;
+using Vortex.Modules.Behaviour.Tasks.Helper;
+using Vortex.Modules.Behaviour.Tasks.Navigation;
 using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Blocks;
 
 /// <summary>
 /// Uses a block once, with whatever is in hand: flips a lever, presses a button,

@@ -3,7 +3,11 @@ using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour.Knowledge;
 using Vortex.Modules.Behaviour.Sources;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Container;
+using Vortex.Modules.Behaviour.Tasks.Navigation;
+using Vortex.Modules.Behaviour.Tasks.Blocks;
+using Vortex.Modules.Behaviour.Tasks.Entities;
+using Vortex.Modules.Behaviour.Tasks.Items;
 
 namespace Vortex.Modules.Behaviour;
 
@@ -33,12 +37,15 @@ public class BehaviourModule : IModule
         builder.RegisterType<AttackTask>().AsSelf();
         builder.RegisterType<UseEntityTask>().AsSelf();
         builder.RegisterType<ObtainItemsTask>().AsSelf();
+        builder.RegisterType<FetchFromContainerTask>().AsSelf();
 
         // What the bot knows about the world beyond what it can see right now.
         builder.RegisterType<FailureMemory>().AsSelf().SingleInstance();
+        builder.RegisterType<ContainerMemory>().AsSelf().AsImplementedInterfaces().SingleInstance();
 
         // Where items can come from. Which of them a task tree may use, and in
         // what order, is the running policy's call, not the registration order.
+        builder.RegisterType<ContainerSource>().As<IItemSource>();
         builder.RegisterType<CraftSource>().As<IItemSource>();
     }
 }

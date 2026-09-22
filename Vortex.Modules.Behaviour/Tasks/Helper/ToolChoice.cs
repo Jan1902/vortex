@@ -1,7 +1,7 @@
 using Vortex.Data;
 using Vortex.Modules.Inventory.Abstraction;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Helper;
 
 /// <summary>
 /// Picks what to break a block with from what the bot carries.

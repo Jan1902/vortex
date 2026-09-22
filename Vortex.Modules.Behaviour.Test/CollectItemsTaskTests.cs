@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Vortex.Data;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Items;
+using Vortex.Modules.Behaviour.Tasks.Navigation;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Shared;
 

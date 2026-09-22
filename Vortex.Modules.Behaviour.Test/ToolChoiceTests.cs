@@ -1,5 +1,5 @@
 using Vortex.Data;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Helper;
 using Vortex.Modules.Inventory.Abstraction;
 
 namespace Vortex.Modules.Behaviour.Test;

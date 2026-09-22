@@ -1,6 +1,6 @@
 using Vortex.Bot.Commands.Infrastructure;
 using Vortex.Modules.Behaviour.Abstraction;
-using Vortex.Modules.Behaviour.Tasks;
+using Vortex.Modules.Behaviour.Tasks.Items;
 
 namespace Vortex.Bot.Commands.Items;
 

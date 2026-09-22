@@ -2,7 +2,7 @@ using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 
-namespace Vortex.Modules.Behaviour.Tasks;
+namespace Vortex.Modules.Behaviour.Tasks.Container;
 
 /// <summary>
 /// Puts everything of an item the bot carries into the open container.
