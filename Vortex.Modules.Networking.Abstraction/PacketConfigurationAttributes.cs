@@ -67,8 +67,9 @@ public class AutoSerializedPacketAttribute(int packetId, ProtocolState state = P
 /// </remarks>
 /// <param name="packetId">The packet ID.</param>
 /// <param name="state">The protocol state.</param>
+/// <param name="packetDirection">Which way the packet travels; a serverbound one is never read from the server.</param>
 [AttributeUsage(AttributeTargets.Class)]
-public class CustomSerializedAttribute<TSerializer, TPacket>(int packetId, ProtocolState state = ProtocolState.Play) : PacketAttribute(packetId, state)
+public class CustomSerializedAttribute<TSerializer, TPacket>(int packetId, ProtocolState state = ProtocolState.Play, PacketDirection packetDirection = PacketDirection.ClientBound) : PacketAttribute(packetId, state, packetDirection)
     where TSerializer : IPacketSerializer<TPacket>
     where TPacket : PacketBase
 {

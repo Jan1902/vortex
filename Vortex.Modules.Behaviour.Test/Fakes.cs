@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Vortex.Data;
 using Vortex.Modules.Entities.Abstraction;
+using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
@@ -110,4 +111,44 @@ internal class FakeInventory : IInventoryManager
         SelectedHotbarSlot = slot;
         return Task.CompletedTask;
     }
+}
+
+internal class FakeInteraction : IInteractionManager
+{
+    public List<(Vector3i Block, BlockFace Face, Vector3f? Cursor)> Clicks { get; } = [];
+
+    public List<int> Attacks { get; } = [];
+
+    /// <summary>Plays the server's part of using an item on a block.</summary>
+    public Action<Vector3i, BlockFace>? OnUseItemOnBlock { get; set; }
+
+    /// <summary>Plays the server's part of an attack.</summary>
+    public Action<int>? OnAttack { get; set; }
+
+    public Task<bool> UseItemOnBlockAsync(Vector3i block, BlockFace face, Hand hand = Hand.Main, Vector3f? cursor = null, CancellationToken cancellationToken = default)
+    {
+        Clicks.Add((block, face, cursor));
+        OnUseItemOnBlock?.Invoke(block, face);
+
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> UseItemAsync(float yaw, float pitch, Hand hand = Hand.Main, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    public Task<bool> DigAsync(Vector3i block, BlockFace face, int ticks, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    public Task AttackAsync(int entityId, bool sneaking = false)
+    {
+        Attacks.Add(entityId);
+        OnAttack?.Invoke(entityId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task InteractWithEntityAsync(int entityId, Hand hand = Hand.Main, Vector3f? point = null, bool sneaking = false)
+        => Task.CompletedTask;
+
+    public Task SwingAsync(Hand hand = Hand.Main) => Task.CompletedTask;
 }

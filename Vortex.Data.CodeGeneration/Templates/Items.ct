@@ -32,6 +32,26 @@ public static class ItemProperties
         _ => null
     };
 
+    /// <summary>
+    /// How much damage a hit with the item in the main hand does, before
+    /// enchantments and effects; 1 for anything that is not a weapon.
+    /// </summary>
+    public static float AttackDamage(this Item item) => item switch
+    {
+        {{attackDamage}}
+        _ => 1f
+    };
+
+    /// <summary>
+    /// How many full-strength hits per second the item allows; the time between
+    /// them is the attack cooldown. 4 for anything that is not a weapon.
+    /// </summary>
+    public static float AttackSpeed(this Item item) => item switch
+    {
+        {{attackSpeed}}
+        _ => 4f
+    };
+
     {{tools}}
 }
 
@@ -40,6 +60,9 @@ public static class ItemProperties
 
 ## Item
 Item.{{name}}
+
+## FloatCase
+{{items}} => {{value}}f,
 
 ## ToolCase
 Item.{{name}} => _{{field}},

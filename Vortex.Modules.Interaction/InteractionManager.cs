@@ -73,6 +73,22 @@ internal class InteractionManager(INetworkingManager networking, ActionSequencer
         return await WaitFor(finished, cancellationToken);
     }
 
+    public async Task AttackAsync(int entityId, bool sneaking = false)
+    {
+        await networking.SendPacket(new Interact(entityId, InteractAction.Attack, 0, 0, 0, Hand.Main, sneaking));
+        await networking.SendPacket(new Swing(Hand.Main));
+    }
+
+    public async Task InteractWithEntityAsync(int entityId, Hand hand = Hand.Main, Vector3f? point = null, bool sneaking = false)
+    {
+        // A click at a point is sent first, as the game does, then the plain use.
+        if (point is { } at)
+            await networking.SendPacket(new Interact(entityId, InteractAction.InteractAt, at.X, at.Y, at.Z, hand, sneaking));
+
+        await networking.SendPacket(new Interact(entityId, InteractAction.Interact, 0, 0, 0, hand, sneaking));
+        await networking.SendPacket(new Swing(hand));
+    }
+
     public Task SwingAsync(Hand hand = Hand.Main)
         => networking.SendPacket(new Swing(hand));
 

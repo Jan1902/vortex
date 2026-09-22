@@ -19,7 +19,11 @@ public class PlaceBlockTaskTests
 
     public PlaceBlockTaskTests()
     {
-        _interaction = new FakeInteraction(_world);
+        // Plays the server for placing: puts cobblestone where a click on a side points.
+        _interaction = new FakeInteraction
+        {
+            OnUseItemOnBlock = (block, face) => _world.Blocks[block + face.Offset()] = BlockState.Default(Block.Cobblestone),
+        };
 
         // Flat ground, empty above.
         for (var x = -2; x <= 6; x++)
@@ -98,27 +102,5 @@ public class PlaceBlockTaskTests
             => Blocks.TryGetValue(position, out var state) ? state : BlockState.Default(Block.Air);
 
         public Chunk? GetChunk(Vector2i position) => null;
-    }
-
-    /// <summary>Plays the server for placing: puts cobblestone where a click on a side points.</summary>
-    private class FakeInteraction(FakeBlocks world) : IInteractionManager
-    {
-        public List<(Vector3i Block, BlockFace Face, Vector3f? Cursor)> Clicks { get; } = [];
-
-        public Task<bool> UseItemOnBlockAsync(Vector3i block, BlockFace face, Hand hand = Hand.Main, Vector3f? cursor = null, CancellationToken cancellationToken = default)
-        {
-            Clicks.Add((block, face, cursor));
-            world.Blocks[block + face.Offset()] = BlockState.Default(Block.Cobblestone);
-
-            return System.Threading.Tasks.Task.FromResult(true);
-        }
-
-        public Task<bool> UseItemAsync(float yaw, float pitch, Hand hand = Hand.Main, CancellationToken cancellationToken = default)
-            => System.Threading.Tasks.Task.FromResult(true);
-
-        public Task<bool> DigAsync(Vector3i block, BlockFace face, int ticks, CancellationToken cancellationToken = default)
-            => System.Threading.Tasks.Task.FromResult(true);
-
-        public Task SwingAsync(Hand hand = Hand.Main) => System.Threading.Tasks.Task.CompletedTask;
     }
 }

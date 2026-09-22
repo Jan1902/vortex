@@ -184,6 +184,29 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(result.ToString());
     }
 
+    if (parts[1] == "attack")
+    {
+        if (parts.Length < 3 || Items.ParseEntityType(parts[2]) is not { } type)
+        {
+            await client.SendChatMessage("What? jeff attack <entity type>");
+            return;
+        }
+
+        if (client.Entities.Nearest(client.Position, entity => entity.Type == type) is not { } target)
+        {
+            await client.SendChatMessage($"I see no {type}");
+            return;
+        }
+
+        var task = client.Brain.CreateTask<AttackTask>(target.Id);
+
+        await client.SendChatMessage($"On it: {task.Description}");
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage(result.ToString());
+    }
+
     if (parts[1] == "use")
     {
         if (Coordinates.ParseBlock(parts, 2) is not { } target)
@@ -385,6 +408,16 @@ static class Items
             .Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
 
         return Enum.TryParse<Item>(pascal, ignoreCase: true, out var item) ? item : null;
+    }
+
+    /// <summary>Reads <c>zombie</c> or <c>minecraft:iron_golem</c> as an <see cref="EntityType"/>.</summary>
+    public static EntityType? ParseEntityType(string name)
+    {
+        var pascal = string.Concat(name.Replace("minecraft:", "")
+            .Split('_', StringSplitOptions.RemoveEmptyEntries)
+            .Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
+
+        return Enum.TryParse<EntityType>(pascal, ignoreCase: true, out var type) ? type : null;
     }
 }
 

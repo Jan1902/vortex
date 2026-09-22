@@ -27,5 +27,7 @@ public class BehaviourModule : IModule
         builder.RegisterType<StoreItemsTask>().AsSelf();
         builder.RegisterType<PlaceBlockTask>().AsSelf();
         builder.RegisterType<CraftTask>().AsSelf();
+        builder.RegisterType<AttackTask>().AsSelf();
+        builder.RegisterType<UseEntityTask>().AsSelf();
     }
 }

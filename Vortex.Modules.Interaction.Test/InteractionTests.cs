@@ -94,6 +94,42 @@ public class InteractionTests
         Assert.Equal(DigAction.Start, _networking.Sent.OfType<PlayerAction>().Single().Action);
     }
 
+    [Fact]
+    public void WritesOnlyWhatAnAttackNeeds()
+    {
+        var bytes = Write(new Interact(300, InteractAction.Attack, 0, 0, 0, Hand.Main, Sneaking: false));
+
+        // Entity 300 as a VarInt, the action, no hand, not sneaking.
+        Assert.Equal(new byte[] { 0xAC, 0x02, 1, 0 }, bytes);
+    }
+
+    [Fact]
+    public void WritesThePointAndHandForInteractingAtAPoint()
+    {
+        var bytes = Write(new Interact(5, InteractAction.InteractAt, 0.5f, 1f, 0f, Hand.Off, Sneaking: true));
+
+        Assert.Equal(1 + 1 + 3 * 4 + 1 + 1, bytes.Length);
+        Assert.Equal((byte)Hand.Off, bytes[^2]);
+        Assert.Equal(1, bytes[^1]);
+    }
+
+    [Fact]
+    public async Task AttacksAndSwings()
+    {
+        await _interaction.AttackAsync(42);
+
+        Assert.Equal(InteractAction.Attack, Assert.IsType<Interact>(_networking.Sent[0]).Action);
+        Assert.IsType<Swing>(_networking.Sent[1]);
+    }
+
+    private static byte[] Write(Interact packet)
+    {
+        using var stream = new MemoryStream();
+        new InteractSerializer().SerializePacket(packet, new Vortex.Modules.Networking.Data.MinecraftBinaryWriter(stream));
+
+        return stream.ToArray();
+    }
+
     private void ConfirmDigging(Vortex.Modules.Networking.Abstraction.PacketBase packet)
     {
         if (packet is PlayerAction action)

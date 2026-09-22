@@ -41,6 +41,19 @@ public interface IInteractionManager
     /// <returns>Whether the server confirmed finishing. The block itself changes the usual way.</returns>
     Task<bool> DigAsync(Vector3i block, BlockFace face, int ticks, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Hits an entity with what is in the main hand. The server does not answer;
+    /// the damage shows in the entity's health, or its death in its removal.
+    /// </summary>
+    Task AttackAsync(int entityId, bool sneaking = false);
+
+    /// <summary>
+    /// Uses an entity with what is in hand, as right-clicking it does: trading
+    /// with a villager, milking a cow, getting into a boat.
+    /// </summary>
+    /// <param name="point">Where on the entity, relative to its position, for entities that care, such as armour stands.</param>
+    Task InteractWithEntityAsync(int entityId, Hand hand = Hand.Main, Vector3f? point = null, bool sneaking = false);
+
     /// <summary>Swings an arm, which others see and some things react to.</summary>
     Task SwingAsync(Hand hand = Hand.Main);
 }

@@ -17,6 +17,11 @@ public sealed class ItemGenerator : IIncrementalGenerator
     private const string MaxStackSize = "minecraft:max_stack_size";
     private const string MaxDamage = "minecraft:max_damage";
     private const string ToolComponent = "minecraft:tool";
+    private const string AttributeModifiers = "minecraft:attribute_modifiers";
+
+    /// <summary>The player's own attack damage and speed, which a held item's modifiers add to.</summary>
+    private const double BaseAttackDamage = 1;
+    private const double BaseAttackSpeed = 4;
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
         => context.RegisterSourceOutput(DataFiles.File(context, "items.json"), static (output, file) =>
@@ -58,10 +63,36 @@ public sealed class ItemGenerator : IIncrementalGenerator
                     .Set("field", tool.Field)
                     .Render())))
                 .Set("tools", string.Join("\n", tools.Select(tool => tool.Code)))
+                .Set("attackDamage", FloatCases(components, "minecraft:generic.attack_damage", BaseAttackDamage))
+                .Set("attackSpeed", FloatCases(components, "minecraft:generic.attack_speed", BaseAttackSpeed))
                 .Render();
 
             output.AddSource("ItemProperties.g.cs", CodeFormatter.Format(code));
         });
+
+    /// <summary>
+    /// Switch arms for the items that change an attribute when held in the main
+    /// hand, grouped by the value it ends up at.
+    /// </summary>
+    private static string FloatCases(List<(string Item, JsonObject? Components)> items, string attribute, double baseValue)
+        => string.Join("\n", items
+            .Select(item => (item.Item, Amount: MainHandModifier(item.Components!, attribute)))
+            .Where(item => item.Amount is not null)
+            .GroupBy(item => baseValue + item.Amount!.Value)
+            .OrderBy(group => group.Key)
+            .Select(group => CodeTemplate.Get("Items", "FloatCase")
+                .Set("items", string.Join(" or ", group.Select(item => CodeTemplate.Get("Items", "Item")
+                    .Set("name", Naming.ToIdentifier(item.Item))
+                    .Render())))
+                .Set("value", group.Key.ToString("R", CultureInfo.InvariantCulture))
+                .Render()));
+
+    private static double? MainHandModifier(JsonObject components, string attribute)
+        => (components.GetObject(AttributeModifiers)?.GetArray("modifiers") ?? new List<object?>())
+            .OfType<JsonObject>()
+            .Where(modifier => modifier.GetString("type") == attribute && modifier.GetString("slot") == "mainhand" && modifier.GetString("operation") == "add_value")
+            .Select(modifier => modifier.GetDouble("amount"))
+            .FirstOrDefault();
 
     private static string RenderTool(string field, JsonObject tool)
         => CodeTemplate.Get("Items", "Tool")
