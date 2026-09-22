@@ -2,11 +2,11 @@
 #
 # Regenerates the game data that the source generators consume: packet IDs,
 # registries, blocks, items, enchantments, tags, recipes and block loot tables,
-# plus the names of entity metadata fields.
+# plus entity metadata names and block hardness.
 #
 # The data comes from the vanilla server's own data generator, so it is always
-# exactly what the target version speaks. Only the metadata names, which the
-# game does not export, come from PrismarineJS. Updating Vortex to a new Minecraft
+# exactly what the target version speaks. Only what the game does not export
+# at all comes from PrismarineJS. Updating Vortex to a new Minecraft
 # version starts by running this against that version.
 #
 # Usage:
@@ -80,35 +80,43 @@ copy data/minecraft/enchantment           "${DATA}/enchantment"
 copy data/minecraft/recipe                "${DATA}/recipe"
 copy data/minecraft/loot_table/blocks     "${DATA}/loot_table/blocks"
 
-# Mojang's data says nothing about entity metadata: which index of an entity's
-# data means what lives in the game's code. PrismarineJS extracts it per
-# version; dataPaths.json names the folder that covers this one, which is often
-# an older version's.
+# Some things the game does not export at all: which index of an entity's
+# metadata means what, and how hard a block is to break. PrismarineJS extracts
+# those per version; its dataPaths.json names the folder that covers this one,
+# which is often an older version's.
 PRISMARINE="https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data"
+PATHS="$(curl -sSfL "${PRISMARINE}/dataPaths.json" | tr -d ' \n\r' | sed 's/.*"pc":{//')"
 
-echo "Fetching entity metadata names from PrismarineJS..."
-ENTITIES_PATH="$(curl -sSfL "${PRISMARINE}/dataPaths.json" \
-    | tr -d ' \n\r' \
-    | sed 's/.*"pc":{//' \
-    | grep -o "\"${VERSION}\":{[^}]*}" \
-    | head -1 \
-    | grep -o '"entities":"[^"]*"' \
-    | cut -d'"' -f4 || true)"
+# Fetches one of PrismarineJS's files for this version into Resources/prismarine.
+prismarine() {
+    local kind="$1" path
 
-if [ -z "${ENTITIES_PATH}" ]; then
-    echo "PrismarineJS has no entity data for ${VERSION} yet" >&2
-    exit 1
-fi
+    path="$(echo "${PATHS}" \
+        | grep -o "\"${VERSION}\":{[^}]*}" \
+        | head -1 \
+        | grep -o "\"${kind}\":\"[^\"]*\"" \
+        | cut -d'"' -f4 || true)"
 
-mkdir -p "${DATA}/prismarine"
-curl -sSfL "${PRISMARINE}/${ENTITIES_PATH}/entities.json" -o "${DATA}/prismarine/entities.json"
-echo "Entity metadata names taken from PrismarineJS ${ENTITIES_PATH}"
+    if [ -z "${path}" ]; then
+        echo "PrismarineJS has no ${kind} data for ${VERSION} yet" >&2
+        exit 1
+    fi
+
+    mkdir -p "${DATA}/prismarine"
+    curl -sSfL "${PRISMARINE}/${path}/${kind}.json" -o "${DATA}/prismarine/${kind}.json"
+    echo "  ${kind}: PrismarineJS ${path}"
+}
+
+echo "Fetching what the game does not export from PrismarineJS..."
+prismarine entities
+prismarine blocks
 
 echo
 echo "Done. Review the diff, then rebuild:"
 echo "  git diff --stat Vortex.Modules.Networking.Abstraction/Resources/ Vortex.Data/Resources/"
 echo "  dotnet build Vortex.sln"
 echo
-echo "Packet IDs, registries, blocks, tags, recipes, loot tables and entity"
-echo "metadata names are all regenerated from this. Packet *layouts* are not -"
-echo "fields that changed between versions still have to be adjusted by hand."
+echo "Packet IDs, registries, blocks, tags, recipes, loot tables, entity"
+echo "metadata names and block hardness are all regenerated from this."
+echo "Packet *layouts* are not - fields that changed between versions still"
+echo "have to be adjusted by hand."
