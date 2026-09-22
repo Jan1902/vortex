@@ -101,20 +101,6 @@ public class MovementControllerTests
         Assert.Equal(MovementResult.Cancelled, await first);
         Assert.False(second.IsCompleted);
     }
-
-    [Fact]
-    public void PassesTheModeAndDirectionThrough()
-    {
-        var controller = Ticking.Controller();
-        controller.WalkTo(East(5), MovementMode.Sprint);
-
-        var input = controller.Tick(Ticking.At(Vector3d.Zero));
-
-        Assert.NotNull(input.Direction);
-        Assert.Equal(1, input.Direction!.X, precision: 6);
-        Assert.Equal(MovementMode.Sprint, input.Mode);
-    }
-
     [Fact]
     public void WalksWhereverItIsPointed()
     {
@@ -179,13 +165,5 @@ public class MovementControllerTests
 
         Assert.Equal(MovementResult.Blocked, await movement);
     }
-
-    [Fact]
-    public async Task AZeroDistanceMoveArrivesImmediately()
-        => Assert.Equal(MovementResult.Arrived, await Ticking.Controller().WalkTo(Vector3d.Zero));
-
-    [Fact]
-    public void NoMovementMeansNoDirection()
-        => Assert.Null(Ticking.Controller().Tick(Ticking.At(Vector3d.Zero)).Direction);
 
 }

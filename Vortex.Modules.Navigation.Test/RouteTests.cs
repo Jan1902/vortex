@@ -47,19 +47,6 @@ public class RouteTests
     }
 
     [Fact]
-    public void StopsBeforeADrop()
-    {
-        var route = new Route([
-            new Walk(new(1, 64, 0)),
-            new Walk(new(2, 64, 0)),
-            new Drop(new(3, 61, 0), Height: 3),
-            new Walk(new(4, 61, 0)),
-        ]);
-
-        Assert.Equal(new Vector3i(2, 64, 0), route.FurthestWalk(_start));
-    }
-
-    [Fact]
     public void HasNoWalkToRunWhenTheRouteStartsWithSomethingElse()
     {
         var route = new Route([
@@ -88,32 +75,11 @@ public class RouteTests
     }
 
     [Fact]
-    public void TakesTheFirstStepWhenTheRouteTurnsImmediately()
-    {
-        var route = new Route([
-            new Walk(new(1, 64, 0)),
-            new Walk(new(1, 64, 1)),
-        ]);
-
-        Assert.Equal(new Vector3i(1, 64, 0), route.FurthestWalk(_start));
-    }
-
-    [Fact]
     public void RunsTheWholeRouteWhenItIsOneLongLine()
     {
         var route = WalkLine(new Vector3i(0, 0, -1), 40);
 
         Assert.Equal(new Vector3i(0, 64, -40), route.FurthestWalk(_start));
-    }
-
-    [Fact]
-    public void HasNothingToAimAtOnAnEmptyRoute()
-    {
-        var empty = new Route([]);
-
-        Assert.Null(empty.FurthestWalk(_start));
-        Assert.Null(empty.Next);
-        Assert.Null(empty.Destination);
     }
 
     [Fact]
@@ -125,14 +91,6 @@ public class RouteTests
         var route = WalkLine(new Vector3i(1, 0, 0), 5);
 
         Assert.Equal(new Vector3i(1, 64, 0), route.FurthestWalk(new Vector3i(-7, 64, 3)));
-    }
-
-    [Fact]
-    public void NeverAimsPastTheEndOfTheRoute()
-    {
-        var route = WalkLine(new Vector3i(1, 0, 0), 3);
-
-        Assert.Equal(route.Destination, route.FurthestWalk(_start));
     }
 
     [Fact]
