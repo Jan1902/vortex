@@ -43,4 +43,35 @@ public interface IPathfinder
     /// <param name="goal">The block position to reach, at foot level.</param>
     /// <param name="capabilities">What the player may do on the way.</param>
     Route? FindRoute(Vector3d start, Vector3i goal, MovementCapabilities? capabilities = null);
+
+    /// <summary>
+    /// Plans a route to the nearest place a block is within reach from.
+    /// </summary>
+    /// <remarks>
+    /// For touching something rather than standing somewhere: breaking a block,
+    /// opening a chest. The place is one the player can stand, from whose middle
+    /// the block's centre is no further than the reach from the eyes, and that
+    /// is neither the block itself nor under it.
+    /// </remarks>
+    /// <param name="start">Where the player is.</param>
+    /// <param name="target">The block to get within reach of.</param>
+    /// <param name="reach">How far from the eyes the block's centre may be.</param>
+    /// <param name="capabilities">What the route may ask of the player.</param>
+    /// <returns>The route, or <c>null</c> if there is none.</returns>
+    Route? FindRouteWithinReach(Vector3d start, Vector3i target, double reach, MovementCapabilities? capabilities = null);
+
+    /// <summary>
+    /// Plans a route to the nearest place close by a block, the block itself
+    /// included.
+    /// </summary>
+    /// <remarks>
+    /// For being next to something rather than on it: an item lying in a gap
+    /// too low to stand in is picked up from the block beside it.
+    /// </remarks>
+    /// <param name="start">Where the player is.</param>
+    /// <param name="target">The block to get close to.</param>
+    /// <param name="range">How many blocks off it, sideways, the place may be; it may also be one higher or lower.</param>
+    /// <param name="capabilities">What the route may ask of the player.</param>
+    /// <returns>The route, or <c>null</c> if there is none.</returns>
+    Route? FindRouteNear(Vector3d start, Vector3i target, int range, MovementCapabilities? capabilities = null);
 }

@@ -12,5 +12,5 @@ public sealed class StoreCommand : TaskCommand
     public Item Item { get; set; }
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<StoreItemsTask>(Item));
+        => Task.FromResult<BotTask?>(new StoreItemsTask(Item));
 }

@@ -78,6 +78,58 @@ internal class WorldManager : IWorldManager
     /// past the top or bottom of the world is ordinary rather than a mistake,
     /// and answering it with null keeps it from throwing.
     /// </remarks>
+    /// <remarks>
+    /// Goes through the sections the cube overlaps directly rather than asking
+    /// for one block at a time, which would take the lock and look the chunk up
+    /// again for every one of them.
+    /// </remarks>
+    public IReadOnlyList<Vector3i> FindBlocks(Vector3i center, int radius, Func<BlockState, bool> match, int limit = 16)
+    {
+        var found = new List<(Vector3i Position, int Distance)>();
+
+        lock (_chunkLock)
+        {
+            for (var chunkX = (center.X - radius) >> 4; chunkX <= (center.X + radius) >> 4; chunkX++)
+                for (var chunkZ = (center.Z - radius) >> 4; chunkZ <= (center.Z + radius) >> 4; chunkZ++)
+                {
+                    if (!_chunks.TryGetValue(new Vector2i(chunkX, chunkZ), out var chunk))
+                        continue;
+
+                    for (var index = 0; index < chunk.Sections.Length; index++)
+                    {
+                        var sectionY = (index - SectionsBelowZero) << 4;
+
+                        if (sectionY + 15 < center.Y - radius || sectionY > center.Y + radius)
+                            continue;
+
+                        Scan(chunk.Sections[index], chunkX << 4, sectionY, chunkX, chunkZ);
+                    }
+                }
+        }
+
+        return found.OrderBy(entry => entry.Distance).Take(limit).Select(entry => entry.Position).ToList();
+
+        void Scan(ChunkSection section, int baseX, int baseY, int chunkX, int chunkZ)
+        {
+            var baseZ = chunkZ << 4;
+
+            for (var x = 0; x < 16; x++)
+                for (var y = 0; y < 16; y++)
+                    for (var z = 0; z < 16; z++)
+                    {
+                        var dx = baseX + x - center.X;
+                        var dy = baseY + y - center.Y;
+                        var dz = baseZ + z - center.Z;
+
+                        if (Math.Abs(dx) > radius || Math.Abs(dy) > radius || Math.Abs(dz) > radius)
+                            continue;
+
+                        if (section.States[x, y, z] is { } state && match(state))
+                            found.Add((new Vector3i(baseX + x, baseY + y, baseZ + z), dx * dx + dy * dy + dz * dz));
+                    }
+        }
+    }
+
     private ChunkSection? GetSection(Vector3i position)
     {
         var chunk = _chunks.TryGetValue(new Vector2i(position.X >> 4, position.Z >> 4), out var value)

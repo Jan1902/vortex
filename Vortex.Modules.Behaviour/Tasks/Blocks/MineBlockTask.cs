@@ -3,79 +3,52 @@ using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Helper;
 using Vortex.Modules.Behaviour.Tasks.Navigation;
-using Vortex.Modules.Interaction.Abstraction;
-using Vortex.Modules.Inventory.Abstraction;
-using Vortex.Modules.Player.Abstraction;
-using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Behaviour.Tasks.Blocks;
 
-/// <summary>
-/// Breaks a block, with the best tool the hotbar has for it.
-/// </summary>
-/// <remarks>
-/// Done once the block is gone, whoever broke it. What it drops is left lying;
-/// <see cref="HarvestBlockTask"/> picks it up as well.
-/// </remarks>
-public class MineBlockTask(
-    Vector3i target,
-    IWorldManager world,
-    IPlayerManager player,
-    IInventoryManager inventory,
-    IInteractionManager interaction,
-    Func<Vector3i, WithinReachTask> withinReach,
-    ILogger<MineBlockTask> logger) : BotTask
+/// <summary>Breaks a block with the best tool at hand. Does not pick up what it drops; see <see cref="HarvestBlockTask"/>.</summary>
+public class MineBlockTask(Vector3i target) : BotTask
 {
-    private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(50);
-
-    /// <summary>How long the block has to change after the server confirmed breaking it.</summary>
-    private static readonly TimeSpan BlockUpdateWait = TimeSpan.FromSeconds(1);
-
     public override string Description
         => $"break the block at {target.X} {target.Y} {target.Z}";
 
-    public override bool IsSatisfied()
-        => world.GetBlock(target) is { } state && IsNothingToBreak(state.Block);
+    public override bool IsDone(Bot bot)
+        => bot.World.GetBlock(target) is { } state && IsNothingToBreak(state.Block);
 
-    public override IEnumerable<BotTask> Dependencies()
+    public override async Task<TaskResult> RunAsync(Bot bot)
     {
-        yield return withinReach(target);
-    }
+        var reached = await bot.Run(new WithinReachTask(target));
 
-    public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
-    {
-        if (world.GetBlock(target) is not { } state)
+        if (reached.IsFailure)
+            return reached;
+
+        if (bot.World.GetBlock(target) is not { } state)
             return TaskResult.Failed($"{target.X} {target.Y} {target.Z} is not loaded");
 
-        var (slot, tool) = ToolChoice.Best(state.Block, inventory);
+        var (slot, tool) = ToolChoice.Best(state.Block, bot.Inventory);
 
-        await Hold.InMainHandAsync(inventory, slot);
+        await Hold.InMainHandAsync(bot.Inventory, slot);
 
-        if (Mining.BreakTicks(state.Block, tool, onGround: player.IsOnGround) is not { } ticks)
+        if (Mining.BreakTicks(state.Block, tool, onGround: bot.Player.IsOnGround) is not { } ticks)
             return TaskResult.Failed($"{state.Block} cannot be broken");
 
-        var face = await Aim.AtBlockAsync(player, target, cancellationToken);
+        var face = await Aim.AtBlockAsync(bot.Player, target, bot.Cancellation);
 
-        logger.LogDebug("Breaking {Block} at {Target} with {Tool}, {Ticks} ticks", state.Block, target, tool?.ToString() ?? "the bare hand", ticks);
+        bot.Logger.LogDebug("Breaking {Block} with {Tool}, {Ticks} ticks", state.Block, tool?.ToString() ?? "the bare hand", ticks);
 
-        if (!await interaction.DigAsync(target, face, ticks, cancellationToken))
-            return TaskResult.Failed($"the server did not confirm breaking {state.Block} at {target.X} {target.Y} {target.Z}");
+        if (!await bot.Interaction.DigAsync(target, face, ticks, bot.Cancellation))
+            return TaskResult.Failed($"the server did not let the bot break {state.Block}");
 
-        var deadline = DateTime.UtcNow + BlockUpdateWait;
+        // The server confirms the dig before the block change arrives.
+        for (var waited = 0; waited < 20 && !IsDone(bot); waited++)
+            await Task.Delay(50, bot.Cancellation);
 
-        while (!IsSatisfied())
-        {
-            if (DateTime.UtcNow > deadline)
-                return TaskResult.Failed($"the server kept {state.Block} at {target.X} {target.Y} {target.Z}");
-
-            await Task.Delay(Tick, cancellationToken);
-        }
-
-        return TaskResult.Success();
+        return IsDone(bot)
+            ? TaskResult.Success()
+            : TaskResult.Failed($"the server kept {state.Block} at {target.X} {target.Y} {target.Z}");
     }
 
-    /// <summary>Air, and fluids, which cannot be broken but do not stand in the way of it either.</summary>
     private static bool IsNothingToBreak(Block block)
         => block is Block.Air or Block.CaveAir or Block.VoidAir or Block.Water or Block.Lava;
 }

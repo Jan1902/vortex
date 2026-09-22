@@ -16,5 +16,5 @@ public sealed class PlaceCommand : TaskCommand
     public Vector3i Block { get; set; } = null!;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<PlaceBlockTask>(Item, Block));
+        => Task.FromResult<BotTask?>(new PlaceBlockTask(Item, Block));
 }

@@ -12,5 +12,5 @@ public sealed class ReachCommand : TaskCommand
     public Vector3i Block { get; set; } = null!;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<WithinReachTask>(Block));
+        => Task.FromResult<BotTask?>(new WithinReachTask(Block));
 }

@@ -1,5 +1,4 @@
 using Vortex.Data;
-using Vortex.Modules.Behaviour.Abstraction;
 
 namespace Vortex.Modules.Behaviour.Tasks.Helper;
 
@@ -46,32 +45,24 @@ internal static class CraftingPlanner
 
     /// <summary>
     /// Picks the recipe to make an item with: one whose ingredients are all at
-    /// hand if there is one, otherwise the first that does not go round in
-    /// circles.
+    /// hand if there is one, otherwise the first that is not made of what is
+    /// already being fetched for it.
     /// </summary>
-    /// <remarks>
-    /// Whether the missing ingredients can actually be had is not for crafting
-    /// to know -- they may come from a chest, a tree or another recipe. The
-    /// task asks for them and finds out.
-    /// </remarks>
     /// <param name="have">How many of an item the bot carries.</param>
-    /// <param name="chain">What is being obtained further up, which no ingredient may be made of alone.</param>
-    /// <returns>The recipe, or <c>null</c> if the item has no recipe that could work.</returns>
-    public static Recipe? Choose(Item item, Func<Item, int> have, ObtainChain chain)
+    /// <param name="excluded">
+    /// Items being fetched further up. A recipe whose ingredient can only be
+    /// one of those would send the bot round in a circle.
+    /// </param>
+    /// <returns>The recipe, or <c>null</c> if the item has none that could work.</returns>
+    public static Recipe? Choose(Item item, Func<Item, int> have, IReadOnlySet<Item> excluded)
     {
         var usable = CraftingRecipes(item)
-            .Where(recipe => Needs(recipe).All(need => need.Ingredient.Items.Any(candidate => candidate != item && !chain.Contains(candidate))))
+            .Where(recipe => Needs(recipe).All(need => need.Ingredient.Items.Any(candidate => candidate != item && !excluded.Contains(candidate))))
             .ToList();
 
         return usable.FirstOrDefault(recipe => Needs(recipe).All(need => Available(need.Ingredient, have) >= need.Count))
             ?? usable.FirstOrDefault();
     }
-
-    /// <summary>Why an item cannot be crafted at all.</summary>
-    public static string Explain(Item item)
-        => CraftingRecipes(item).Any()
-            ? $"every recipe for {item} needs what is being made from it"
-            : $"{item} cannot be crafted";
 
     /// <summary>How many of the items that satisfy an ingredient the bot carries in all.</summary>
     public static int Available(Ingredient ingredient, Func<Item, int> have)

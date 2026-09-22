@@ -1,0 +1,20 @@
+<Project>
+
+    <!--
+      For the module abstractions: the interfaces and models a module is spoken
+      to through. They deliberately do not reference Vortex.Framework.Abstraction.
+      That one references the behaviour abstraction, so that a client can hand
+      out its brain, and the behaviour abstraction reaches into every module.
+    -->
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Vortex.Shared\Vortex.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

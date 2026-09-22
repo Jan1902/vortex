@@ -1,41 +1,59 @@
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
-using Vortex.Modules.Inventory.Abstraction;
+using Vortex.Modules.Behaviour.Tasks.Helper;
 
 namespace Vortex.Modules.Behaviour.Tasks.Container;
 
 /// <summary>
-/// Takes an item out of the open container until the bot carries a number of it.
+/// Takes items out of the container that is open, a stack at a time, until the
+/// bot carries enough of them or the container has no more.
 /// </summary>
-/// <remarks>
-/// Moves whole stacks, so it can end up with more than asked for. The container
-/// has to be open already; opening it is what <see cref="OpenContainerTask"/> does.
-/// </remarks>
-public class TakeItemsTask(Item item, int count, IInventoryManager inventory) : BotTask
+public class TakeItemsTask(IReadOnlySet<Item> items, int count) : BotTask
 {
-    public override string Description
-        => $"carry {count} {item} out of the open container";
-
-    public override bool IsSatisfied()
-        => inventory.Count(item) >= count;
-
-    public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
+    public TakeItemsTask(Item item, int count)
+        : this(new HashSet<Item> { item }, count)
     {
-        if (inventory.OpenContainer is not { } container)
+    }
+
+    public override string Description
+        => $"take {count} {Stacks.Describe(items)} out of the open container";
+
+    public override bool IsDone(Bot bot)
+        => Stacks.CountIn(items, bot.Inventory) >= count;
+
+    public override async Task<TaskResult> RunAsync(Bot bot)
+    {
+        if (bot.Inventory.OpenContainer is null)
             return TaskResult.Failed("no container is open");
 
-        var slot = Enumerable.Range(0, container.ContainerSize)
-            .FirstOrDefault(slot => container.Slots[slot]?.Item == item, -1);
+        var took = 0;
 
-        if (slot < 0)
-            return TaskResult.Failed($"the container has no more {item}");
+        while (!IsDone(bot))
+        {
+            if (bot.Inventory.OpenContainer is not { } window)
+                return TaskResult.Failed("the container closed");
 
-        var before = inventory.Count(item);
+            var slot = Enumerable.Range(0, window.ContainerSize)
+                .FirstOrDefault(slot => window.Slots[slot] is { } stack && items.Contains(stack.Item), -1);
 
-        await inventory.QuickMoveAsync(slot);
+            if (slot < 0)
+                break;
 
-        return inventory.Count(item) > before
+            var before = Stacks.CountIn(items, bot.Inventory);
+
+            await bot.Inventory.QuickMoveAsync(slot);
+            await Task.Delay(100, bot.Cancellation);
+
+            if (Stacks.CountIn(items, bot.Inventory) <= before)
+                return TaskResult.Failed($"no room for {Stacks.Describe(items)}");
+
+            took++;
+        }
+
+        OpenContainerTask.Remember(bot);
+
+        return took > 0 || IsDone(bot)
             ? TaskResult.Success()
-            : TaskResult.Failed($"no room for {item}");
+            : TaskResult.Failed($"the container has no {Stacks.Describe(items)}");
     }
 }

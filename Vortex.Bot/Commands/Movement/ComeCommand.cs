@@ -1,7 +1,6 @@
 using Vortex.Bot.Commands.Infrastructure;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Navigation;
-using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Bot.Commands.Movement;
@@ -26,6 +25,6 @@ public sealed class ComeCommand : TaskCommand
             return null;
         }
 
-        return context.Client.Brain.CreateTask<GoToTask>(player.Position.ToBlockPosition(), MovementCapabilities.Athletic);
+        return new GoToTask(player.Position.ToBlockPosition());
     }
 }

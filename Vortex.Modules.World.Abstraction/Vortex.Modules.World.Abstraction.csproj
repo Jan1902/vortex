@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="../ProjectConfiguration.Base.csproj" />
+    <Import Project="../ProjectConfiguration.Abstraction.csproj" />
 
 </Project>

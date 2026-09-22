@@ -11,5 +11,5 @@ public sealed class CollectCommand : TaskCommand
     public double Radius { get; set; } = 16;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<CollectItemsTask>(context.Client.Position, Radius));
+        => Task.FromResult<BotTask?>(new CollectItemsTask(context.Client.Position, Radius));
 }

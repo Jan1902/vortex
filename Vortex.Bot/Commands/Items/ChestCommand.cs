@@ -13,7 +13,7 @@ public sealed class ChestCommand : BotCommand
     public override async Task ExecuteAsync(CommandContext context)
     {
         var client = context.Client;
-        var result = await client.Brain.RunAsync(client.Brain.CreateTask<OpenContainerTask>(Block));
+        var result = await client.Brain.RunAsync(new OpenContainerTask(Block));
 
         if (result.IsFailure || client.Inventory.OpenContainer is not { } container)
         {

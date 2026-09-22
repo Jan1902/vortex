@@ -21,6 +21,6 @@ public sealed class AttackCommand : TaskCommand
             return null;
         }
 
-        return client.Brain.CreateTask<AttackTask>(target.Id);
+        return new AttackTask(target.Id);
     }
 }

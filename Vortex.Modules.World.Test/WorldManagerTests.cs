@@ -89,6 +89,39 @@ public class WorldManagerTests
         Assert.Equal(Block.Stone, world.GetBlock(new Vector3i(0, 64, 0))?.Block);
     }
 
+    [Fact]
+    public void FindBlocks_ReturnsTheNearestMatchesFirst()
+    {
+        var world = Loaded();
+        world.SetChunk(new Vector2i(-1, 0), EmptyChunk());
+
+        world.SetBlock(new Vector3i(9, 64, 3), BlockState.Default(Block.OakLog));
+        world.SetBlock(new Vector3i(2, 65, 3), BlockState.Default(Block.OakLog));
+        world.SetBlock(new Vector3i(-3, 64, 3), BlockState.Default(Block.OakLog));
+        world.SetBlock(new Vector3i(1, 64, 3), BlockState.Default(Block.Stone));
+
+        var logs = world.FindBlocks(new Vector3i(0, 64, 3), radius: 16, state => state.Block == Block.OakLog);
+
+        Assert.Equal([new Vector3i(2, 65, 3), new Vector3i(-3, 64, 3), new Vector3i(9, 64, 3)], logs);
+    }
+
+    [Fact]
+    public void FindBlocks_StaysWithinTheRadiusAndTheLimit()
+    {
+        var world = Loaded();
+
+        for (var x = 1; x <= 10; x++)
+            world.SetBlock(new Vector3i(x, -60, 0), BlockState.Default(Block.IronOre));
+
+        // Far below, out of the cube.
+        world.SetBlock(new Vector3i(0, 40, 0), BlockState.Default(Block.IronOre));
+
+        var ores = world.FindBlocks(new Vector3i(0, -60, 0), radius: 8, state => state.Block == Block.IronOre, limit: 3);
+
+        Assert.Equal([new Vector3i(1, -60, 0), new Vector3i(2, -60, 0), new Vector3i(3, -60, 0)], ores);
+        Assert.Equal(8, world.FindBlocks(new Vector3i(0, -60, 0), radius: 8, state => state.Block == Block.IronOre, limit: 100).Count);
+    }
+
     private static WorldManager Loaded()
     {
         var world = new WorldManager();

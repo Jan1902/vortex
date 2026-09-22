@@ -3,11 +3,11 @@ using Vortex.Modules.Behaviour.Abstraction;
 namespace Vortex.Bot.Commands.Infrastructure;
 
 /// <summary>
-/// A command that gives the bot's brain a task: it says what it is on, runs the
-/// task and says how it went.
+/// A command that gives the bot a task: it says what it is on, runs the task
+/// and says how it went.
 /// </summary>
 /// <remarks>
-/// The brain runs one task at a time, so a new one replaces whatever the bot was
+/// The bot runs one task at a time, so a new one replaces whatever it was
 /// doing, which then reports itself cancelled.
 /// </remarks>
 public abstract class TaskCommand : BotCommand
@@ -19,19 +19,20 @@ public abstract class TaskCommand : BotCommand
 
         await context.ReplyAsync($"On it: {task.Description}");
 
-        var result = await context.Client.Brain.RunAsync(task, Policy);
+        var result = await context.Client.Brain.RunAsync(task, MayDig);
 
         await context.ReplyAsync(result.ToString());
     }
 
     /// <summary>
-    /// What the task may do along the way. Moving stays out of other people's
-    /// walls unless a command is about gathering.
+    /// Whether the bot may break blocks in the way of where it is going. Only
+    /// for commands that are about gathering; nobody wants a tunnel through
+    /// their wall because they said "come".
     /// </summary>
-    protected virtual BehaviourPolicy Policy => BehaviourPolicy.Default;
+    protected virtual bool MayDig => false;
 
     /// <summary>
-    /// Builds the task to run, through <c>context.Client.Brain.CreateTask</c>.
+    /// Builds the task to run.
     /// </summary>
     /// <returns>The task, or <c>null</c> after telling the caller why there is none.</returns>
     protected abstract Task<BotTask?> CreateTaskAsync(CommandContext context);

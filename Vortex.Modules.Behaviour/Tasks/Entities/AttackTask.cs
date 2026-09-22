@@ -3,106 +3,79 @@ using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Helper;
 using Vortex.Modules.Behaviour.Tasks.Navigation;
-using Vortex.Modules.Entities.Abstraction;
-using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
-using Vortex.Modules.Navigation.Abstraction;
-using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Behaviour.Tasks.Entities;
 
-/// <summary>
-/// Fights an entity until it is gone.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Done once the entity has no health left or is no longer tracked. Each round
-/// either closes in on it or lands one hit with the best weapon carried, then
-/// waits out the weapon's cooldown, since a hit before that does less damage.
-/// </para>
-/// <para>
-/// The entity counts as small, going by <see cref="Entity.AssumedSize"/>, so the
-/// bot comes close and aims for its middle.
-/// </para>
-/// </remarks>
-public class AttackTask(
-    int entityId,
-    IEntityManager entities,
-    IInventoryManager inventory,
-    IPlayerManager player,
-    IInteractionManager interaction,
-    Func<Vector3i, MovementCapabilities, GoToTask> goTo,
-    ILogger<AttackTask> logger) : BotTask
+/// <summary>Fights an entity until it is dead, walking after it between hits.</summary>
+public class AttackTask(int entityId) : BotTask
 {
-    /// <summary>How close the entity has to be to hit it, from the eyes to its middle.</summary>
+    /// <summary>How close the bot has to be to hit, from the eyes to the middle of the entity.</summary>
     private const double Reach = 3.0;
 
-    private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(50);
+    /// <summary>How many hits it may take before something is clearly wrong.</summary>
+    private const int MaxHits = 100;
 
     public override string Description
-        => entities.Get(entityId) is { } entity ? $"fight the {entity.Type} {entityId}" : $"fight entity {entityId}";
+        => $"fight entity {entityId}";
 
-    // Dead as soon as its health reaches nothing: the entity itself lingers for
-    // its death animation, and hitting that is wasted.
-    public override bool IsSatisfied()
-        => entities.Get(entityId) is null or { Health: <= 0 };
+    public override bool IsDone(Bot bot)
+        => bot.Entities.Get(entityId) is null or { Health: <= 0 };
 
-    public override IEnumerable<BotTask> Dependencies()
+    public override async Task<TaskResult> RunAsync(Bot bot)
     {
-        if (entities.Get(entityId) is { } entity && !InReach(entity))
-            yield return goTo(entity.Position.ToBlockPosition(), MovementCapabilities.Athletic);
+        for (var hit = 0; hit < MaxHits; hit++)
+        {
+            if (IsDone(bot))
+                return TaskResult.Success();
+
+            if (bot.Entities.Get(entityId) is not { } entity)
+                return TaskResult.Success();
+
+            if (!InReach(bot, entity.Center))
+            {
+                var walked = await bot.Run(new GoNearTask(entity.Position.ToBlockPosition()));
+
+                if (walked.IsFailure)
+                    return walked;
+
+                continue;
+            }
+
+            var before = bot.Inventory.HeldItem?.Item;
+
+            if (BestWeapon(bot) is { } weapon)
+                await Hold.InMainHandAsync(bot.Inventory, weapon);
+
+            var held = bot.Inventory.HeldItem?.Item;
+
+            // Swapping weapons resets the swing; hitting at once does no damage.
+            if (held != before)
+                await Task.Delay(Cooldown(held), bot.Cancellation);
+
+            bot.Player.LookAt(entity.Center);
+            await Task.Delay(50, bot.Cancellation);
+
+            bot.Logger.LogDebug("Hitting {Type} {EntityId} with {Weapon}", entity.Type, entityId, held?.ToString() ?? "the bare hand");
+
+            await bot.Interaction.AttackAsync(entityId);
+            await Task.Delay(Cooldown(held), bot.Cancellation);
+        }
+
+        return TaskResult.Failed($"entity {entityId} is still alive after {MaxHits} hits");
     }
 
-    public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
-    {
-        if (entities.Get(entityId) is not { } entity)
-            return TaskResult.Success();
-
-        var before = inventory.HeldItem?.Item;
-
-        if (BestWeapon() is { } weapon)
-            await Hold.InMainHandAsync(inventory, weapon);
-
-        var held = inventory.HeldItem?.Item;
-
-        // Changing what is held starts the cooldown over; hitting before it has
-        // passed wastes most of the hit.
-        if (held != before)
-            await Task.Delay(Cooldown(held), cancellationToken);
-
-        player.LookAt(entity.Center);
-        await Task.Delay(Tick, cancellationToken);
-
-        logger.LogDebug("Hitting {Type} {EntityId} with {Weapon}", entity.Type, entityId, held?.ToString() ?? "the bare hand");
-
-        await interaction.AttackAsync(entityId);
-
-        // A full-strength hit needs the weapon's cooldown to have passed.
-        await Task.Delay(Cooldown(held), cancellationToken);
-
-        return TaskResult.Success();
-    }
-
-    /// <summary>The time between full-strength hits with an item.</summary>
     private static TimeSpan Cooldown(Item? weapon)
         => TimeSpan.FromSeconds(1 / (weapon ?? Item.Air).AttackSpeed());
 
-    private bool InReach(Entity entity)
-        => (player.Position + new Vector3d(0, Aim.EyeHeight, 0)).DistanceTo(entity.Center) <= Reach;
+    private static bool InReach(Bot bot, Vector3d target)
+        => (bot.Player.Position + new Vector3d(0, Aim.EyeHeight, 0)).DistanceTo(target) <= Reach;
 
-    /// <summary>
-    /// The slot of the player window holding what hits hardest, or <c>null</c>
-    /// when nothing carried beats the bare hand.
-    /// </summary>
-    private int? BestWeapon()
-    {
-        var best = inventory.Find(stack => stack.Item.AttackDamage() > 1)
+    private static int? BestWeapon(Bot bot)
+        => bot.Inventory.Find(stack => stack.Item.AttackDamage() > 1)
             .OrderByDescending(found => found.Stack.Item.AttackDamage())
-            .ThenBy(found => found.Slot == PlayerSlots.Hotbar(inventory.SelectedHotbarSlot) ? 0 : 1)
+            .ThenBy(found => found.Slot == PlayerSlots.Hotbar(bot.Inventory.SelectedHotbarSlot) ? 0 : 1)
             .Select(found => (int?)found.Slot)
             .FirstOrDefault();
-
-        return best;
-    }
 }

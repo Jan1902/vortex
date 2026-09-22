@@ -14,8 +14,8 @@ public sealed class CraftCommand : TaskCommand
     [Argument(1, Optional = true)]
     public int Count { get; set; } = 1;
 
-    protected override BehaviourPolicy Policy => BehaviourPolicy.Gathering;
+    protected override bool MayDig => true;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<CraftTask>(Item, context.Client.Inventory.Count(Item) + Count, ObtainChain.Empty));
+        => Task.FromResult<BotTask?>(new CraftTask(Item, context.Client.Inventory.Count(Item) + Count));
 }

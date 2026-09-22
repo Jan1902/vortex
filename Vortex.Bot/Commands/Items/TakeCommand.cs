@@ -15,5 +15,5 @@ public sealed class TakeCommand : TaskCommand
     public int Count { get; set; } = 64;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<TakeItemsTask>(Item, context.Client.Inventory.Count(Item) + Count));
+        => Task.FromResult<BotTask?>(new TakeItemsTask(Item, context.Client.Inventory.Count(Item) + Count));
 }

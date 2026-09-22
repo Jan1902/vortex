@@ -1,11 +1,8 @@
-using Microsoft.Extensions.Logging;
+using System.Globalization;
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Navigation;
 using Vortex.Modules.Entities.Abstraction;
-using Vortex.Modules.Inventory.Abstraction;
-using Vortex.Modules.Navigation.Abstraction;
-using Vortex.Modules.Player.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Behaviour.Tasks.Items;
@@ -14,72 +11,80 @@ namespace Vortex.Modules.Behaviour.Tasks.Items;
 /// Picks up the items lying around a place.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Picking up is the server's doing: it hands an item to a player who comes
-/// close enough and has room for it. So this task only walks up to the items,
-/// one after the other, nearest first, and is done when none is left that the
-/// inventory could take.
-/// </para>
-/// <para>
-/// An item cannot be picked up for a moment after it was dropped. Standing on
-/// it, the task waits that out rather than walking on.
-/// </para>
+/// Best effort on purpose: an item that cannot be got at, or that does not go
+/// in, is skipped rather than failed over. The server only says where an item
+/// is about once a second, so the bot walks to where it last saw it and waits
+/// a moment.
 /// </remarks>
-public class CollectItemsTask(
-    Vector3d center,
-    double radius,
-    IEntityManager entities,
-    IInventoryManager inventory,
-    IPlayerManager player,
-    Func<Vector3i, MovementCapabilities, GoToTask> goTo,
-    ILogger<CollectItemsTask> logger) : BotTask
+public class CollectItemsTask(Vector3d center, double radius) : BotTask
 {
-    /// <summary>How long to wait for an item that is not being picked up although the bot stands on it.</summary>
-    private static readonly TimeSpan PickupWait = TimeSpan.FromSeconds(3);
+    /// <summary>How long to stand by an item before giving up on it.</summary>
+    private static readonly TimeSpan PickupWait = TimeSpan.FromSeconds(2);
 
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(50);
+    /// <summary>How many items to gather before calling it a round.</summary>
+    private const int MaxItems = 32;
+
+    /// <summary>How far below itself a falling item is followed to where it will land.</summary>
+    private const int MaxFall = 8;
 
     public override string Description
-        => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"collect the items within {radius:0.#} blocks of {center.X:F0} {center.Y:F0} {center.Z:F0}");
+        => string.Create(CultureInfo.InvariantCulture, $"collect the items within {radius:0.#} blocks of {center.X:F0} {center.Y:F0} {center.Z:F0}");
 
-    public override bool IsSatisfied()
-        => NextItem() is null;
+    public override bool IsDone(Bot bot)
+        => NextItem(bot, new HashSet<int>()) is null;
 
-    public override IEnumerable<BotTask> Dependencies()
+    public override async Task<TaskResult> RunAsync(Bot bot)
     {
-        if (NextItem() is { } item)
-            yield return goTo(item.Position.ToBlockPosition(), MovementCapabilities.Athletic);
-    }
+        var skipped = new HashSet<int>();
 
-    public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
-    {
-        if (NextItem() is not { } item)
-            return TaskResult.Success();
-
-        logger.LogDebug("Waiting to pick up {Item} at {Position}", item.Item, item.Position);
-
-        var deadline = DateTime.UtcNow + PickupWait;
-
-        while (entities.Get(item.Id) is not null)
+        for (var picked = 0; picked < MaxItems; picked++)
         {
-            if (DateTime.UtcNow > deadline)
-                return TaskResult.Failed($"{item.Item?.Item} at {item.Position.ToBlockPosition()} is not being picked up");
+            if (NextItem(bot, skipped) is not { } item)
+                return TaskResult.Success();
 
-            await Task.Delay(PollInterval, cancellationToken);
+            var walked = await bot.Run(new GoNearTask(LandingOf(bot, item.Position.ToBlockPosition())));
+
+            if (walked.IsFailure)
+            {
+                skipped.Add(item.Id);
+                continue;
+            }
+
+            var deadline = DateTime.UtcNow + PickupWait;
+
+            while (bot.Entities.Get(item.Id) is not null && DateTime.UtcNow < deadline)
+                await Task.Delay(50, bot.Cancellation);
+
+            if (bot.Entities.Get(item.Id) is not null)
+                skipped.Add(item.Id);
         }
 
         return TaskResult.Success();
     }
 
-    /// <summary>
-    /// The nearest item in the area that the inventory has room for. Items whose
-    /// stack the server has not described yet are left for the next round.
-    /// </summary>
-    private Entity? NextItem()
-        => entities.Entities
+    /// <summary>The nearest item in the area the inventory has room for.</summary>
+    private Entity? NextItem(Bot bot, IReadOnlySet<int> skipped)
+        => bot.Entities.Entities
             .Where(entity => entity.Type == EntityType.Item
+                && !skipped.Contains(entity.Id)
                 && entity.Item is { } stack
                 && entity.Position.DistanceTo(center) <= radius
-                && inventory.SpaceFor(stack.Item) > 0)
-            .MinBy(entity => entity.Position.DistanceTo(player.Position));
+                && bot.Inventory.SpaceFor(stack.Item) > 0)
+            .MinBy(entity => entity.Position.DistanceTo(bot.Player.Position));
+
+    /// <summary>Where an item comes to rest: the block above the first solid one below it.</summary>
+    private static Vector3i LandingOf(Bot bot, Vector3i block)
+    {
+        for (var fallen = 0; fallen < MaxFall; fallen++)
+        {
+            var below = block with { Y = block.Y - 1 };
+
+            if (bot.World.GetBlock(below) is not { } state || BlockCollision.IsSolid(state))
+                return block;
+
+            block = below;
+        }
+
+        return block;
+    }
 }

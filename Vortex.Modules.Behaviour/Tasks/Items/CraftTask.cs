@@ -6,8 +6,6 @@ using Vortex.Modules.Behaviour.Tasks.Container;
 using Vortex.Modules.Behaviour.Tasks.Helper;
 using Vortex.Modules.Crafting.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
-using Vortex.Modules.Player.Abstraction;
-using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Behaviour.Tasks.Items;
@@ -16,32 +14,13 @@ namespace Vortex.Modules.Behaviour.Tasks.Items;
 /// Crafts an item until the bot carries a number of it.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Crafting is all this does. What goes into the item it asks for as items to
-/// carry, and where those come from -- a chest, another recipe, a tree -- is up
-/// to <see cref="ObtainItemsTask"/> and the sources behind it. The recipe is
-/// chosen afresh each round from what the bot carries, so a switch to another
-/// wood halfway through needs no plan to be thrown away.
-/// </para>
-/// <para>
-/// A recipe too big for the inventory's 2 by 2 grid needs a crafting table: one
-/// close by is used, otherwise one is carried and put down. The table is seen
-/// to before the ingredients, because making one uses up planks that would
-/// otherwise have to be fetched twice.
-/// </para>
+/// What goes into it is asked for with <see cref="GetItemsTask"/>, so the
+/// ingredients may just as well come out of a chest or a tree. A recipe too big
+/// for the inventory's 2 by 2 grid needs a crafting table: one close by is used,
+/// otherwise one is fetched and put down. The table is seen to first, because
+/// making one uses up planks that would otherwise be fetched twice.
 /// </remarks>
-public class CraftTask(
-    Item item,
-    int count,
-    ObtainChain chain,
-    IInventoryManager inventory,
-    ICraftingManager crafting,
-    IWorldManager world,
-    IPlayerManager player,
-    Func<ItemRequest, ObtainChain, ObtainItemsTask> obtain,
-    Func<Vector3i, OpenContainerTask> open,
-    Func<Item, Vector3i, PlaceBlockTask> place,
-    ILogger<CraftTask> logger) : BotTask
+public class CraftTask(Item item, int count) : BotTask
 {
     /// <summary>How far around the bot a crafting table is looked for.</summary>
     private const int TableSearchRadius = 6;
@@ -50,98 +29,120 @@ public class CraftTask(
     private static readonly Vector3i[] TableSpots =
         [new(2, 0, 0), new(-2, 0, 0), new(0, 0, 2), new(0, 0, -2), new(2, 0, 2), new(-2, 0, -2), new(2, 0, -2), new(-2, 0, 2)];
 
+    /// <summary>The item being crafted, so that nothing is made out of itself further down.</summary>
+    public Item Item => item;
+
     public override string Description
         => $"craft {item} until carrying {count}";
 
-    public override bool IsSatisfied()
-        => inventory.Count(item) >= count;
+    public override bool IsDone(Bot bot)
+        => bot.Inventory.Count(item) >= count;
 
-    public override IEnumerable<BotTask> Dependencies()
+    public override async Task<TaskResult> RunAsync(Bot bot)
     {
-        // No recipe to follow: the action below says why.
-        if (CraftingPlanner.Choose(item, inventory.Count, chain) is not { } recipe)
-            yield break;
+        // One craft per round: what a craft leaves behind is what the next one
+        // is worked out from.
+        for (var round = 0; round < 64; round++)
+        {
+            if (IsDone(bot))
+                return TaskResult.Success();
 
-        var making = chain.With([item]);
-        var atTable = NeedsTable(recipe) && crafting.ActiveGrid is not { Size: 3 };
-        var table = atTable ? FindTable() : null;
+            if (CraftingPlanner.Choose(item, bot.Inventory.Count, GetItemsTask.BeingGot(bot)) is not { } recipe)
+                return TaskResult.Failed($"no recipe for {item} that is not made of what is being fetched for it");
 
-        if (atTable && table is null)
-            yield return obtain(ItemRequest.Of(Item.CraftingTable, 1), making);
+            var needsTable = !bot.Crafting.Fits(recipe, new CraftingGrid(ContainerWindow.PlayerWindowId, 2));
+            var atTable = bot.Crafting.ActiveGrid is { Size: 3 };
 
-        // Enough for every craft still to go, so that the ingredients are
-        // fetched in one go rather than once per craft.
-        var crafts = (count - inventory.Count(item) + recipe.Result!.Count - 1) / recipe.Result.Count;
+            // A table to work at, before the ingredients: making one costs planks.
+            if (needsTable && !atTable && FindTable(bot) is null && bot.Inventory.Count(Item.CraftingTable) == 0)
+            {
+                var got = await bot.Run(new GetItemsTask(Item.CraftingTable, 1));
 
-        foreach (var (ingredient, perCraft) in CraftingPlanner.Needs(recipe))
-            yield return obtain(new ItemRequest(ingredient.Items, perCraft * Math.Max(crafts, 1)), making);
+                if (got.IsFailure)
+                    return got;
+            }
 
-        if (!atTable)
-            yield break;
+            // Enough for every craft still to go, so the ingredients are
+            // fetched in one go rather than once per craft.
+            var crafts = (count - bot.Inventory.Count(item) + recipe.Result!.Count - 1) / recipe.Result.Count;
 
-        if (table is not null)
-            yield return open(table);
-        else if (FindSpotForTable() is { } spot)
-            yield return place(Item.CraftingTable, spot);
+            foreach (var (ingredient, perCraft) in CraftingPlanner.Needs(recipe))
+            {
+                var needed = perCraft * Math.Max(crafts, 1);
+
+                if (CraftingPlanner.Available(ingredient, bot.Inventory.Count) >= needed)
+                    continue;
+
+                var got = await bot.Run(new GetItemsTask(ingredient.Items, needed));
+
+                if (got.IsFailure)
+                    return got;
+            }
+
+            // Fetching one ingredient can eat another: sticks are made of the
+            // planks just fetched. Another round then fetches what is short.
+            if (CraftingPlanner.Needs(recipe).Any(need => CraftingPlanner.Available(need.Ingredient, bot.Inventory.Count) < need.Count))
+                continue;
+
+            if (needsTable && bot.Crafting.ActiveGrid is not { Size: 3 })
+            {
+                var opened = await OpenTable(bot);
+
+                if (opened.IsFailure)
+                    return opened;
+            }
+
+            // A chest or furnace open on top has no grid to craft in.
+            if (bot.Crafting.ActiveGrid is null)
+                await bot.Inventory.CloseContainerAsync();
+
+            if (bot.Crafting.ActiveGrid is not { } grid || !bot.Crafting.Fits(recipe, grid))
+                return TaskResult.Failed($"{item} needs a crafting table");
+
+            bot.Logger.LogDebug("Crafting {Recipe} in a {Size}x{Size} grid", recipe.Identifier, grid.Size, grid.Size);
+
+            if (!await bot.Crafting.CraftAsync(recipe, bot.Cancellation))
+                return TaskResult.Failed($"crafting {recipe.Identifier} did not work");
+        }
+
+        return TaskResult.Failed($"still short of {count} {item} after 64 crafts");
     }
 
-    public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
+    /// <summary>Opens a crafting table nearby, putting one down if there is none.</summary>
+    private static async Task<TaskResult> OpenTable(Bot bot)
     {
-        if (CraftingPlanner.Choose(item, inventory.Count, chain) is not { } recipe)
-            return TaskResult.Failed(CraftingPlanner.Explain(item));
+        if (FindTable(bot) is not { } table)
+        {
+            if (FindSpotForTable(bot) is not { } spot)
+                return TaskResult.Failed("no room next to the bot to put a crafting table down");
 
-        // A chest or furnace open on top has no grid to craft in.
-        if (crafting.ActiveGrid is null)
-            await inventory.CloseContainerAsync();
+            var placed = await bot.Run(new PlaceBlockTask(Item.CraftingTable, spot));
 
-        if (crafting.ActiveGrid is not { } grid || !crafting.Fits(recipe, grid))
-            return TaskResult.Failed($"{item} needs a crafting table");
+            if (placed.IsFailure)
+                return placed;
 
-        logger.LogDebug("Crafting {Recipe} in a {Size}x{Size} grid", recipe.Identifier, grid.Size, grid.Size);
+            table = spot;
+        }
 
-        return await crafting.CraftAsync(recipe, cancellationToken)
-            ? TaskResult.Success()
-            : TaskResult.Failed($"crafting {recipe.Identifier} did not work");
+        return await bot.Run(new OpenContainerTask(table));
     }
 
-    private bool NeedsTable(Recipe recipe)
-        => !crafting.Fits(recipe, new CraftingGrid(ContainerWindow.PlayerWindowId, 2));
+    private static Vector3i? FindTable(Bot bot)
+        => bot.World
+            .FindBlocks(bot.Player.Position.ToBlockPosition(), TableSearchRadius, state => state.Block == Block.CraftingTable, limit: 1)
+            .Cast<Vector3i?>()
+            .FirstOrDefault();
 
-    /// <summary>The nearest crafting table around the bot, if there is one.</summary>
-    private Vector3i? FindTable()
+    private static Vector3i? FindSpotForTable(Bot bot)
     {
-        var feet = player.Position.ToBlockPosition();
-        Vector3i? nearest = null;
-        var nearestDistance = int.MaxValue;
-
-        for (var x = -TableSearchRadius; x <= TableSearchRadius; x++)
-            for (var y = -TableSearchRadius; y <= TableSearchRadius; y++)
-                for (var z = -TableSearchRadius; z <= TableSearchRadius; z++)
-                {
-                    var position = feet + new Vector3i(x, y, z);
-
-                    if (world.GetBlock(position)?.Block != Block.CraftingTable)
-                        continue;
-
-                    var distance = x * x + y * y + z * z;
-                    if (distance < nearestDistance)
-                        (nearest, nearestDistance) = (position, distance);
-                }
-
-        return nearest;
-    }
-
-    /// <summary>An empty block next to the bot, on solid ground, to put a crafting table in.</summary>
-    private Vector3i? FindSpotForTable()
-    {
-        var feet = player.Position.ToBlockPosition();
+        var feet = bot.Player.Position.ToBlockPosition();
 
         foreach (var offset in TableSpots)
         {
             var spot = feet + offset;
 
-            if (world.GetBlock(spot)?.Block is Block.Air or Block.CaveAir
-                && BlockCollision.IsSolid(world.GetBlock(spot + new Vector3i(0, -1, 0))))
+            if (bot.World.GetBlock(spot)?.Block is Block.Air or Block.CaveAir
+                && BlockCollision.IsSolid(bot.World.GetBlock(spot + new Vector3i(0, -1, 0))))
                 return spot;
         }
 

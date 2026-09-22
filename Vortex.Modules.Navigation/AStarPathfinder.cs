@@ -123,6 +123,9 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// </remarks>
     private const double TurnCost = WalkCost / 1000;
 
+    /// <summary>How high above its feet the player's eyes are, which is where reach is measured from.</summary>
+    private const double EyeHeight = 1.62;
+
     /// <summary>The direction of a node nothing has been walked into yet.</summary>
     private const int NoDirection = -1;
 
@@ -179,6 +182,65 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     public Route? FindRoute(Vector3i start, Vector3i goal, MovementCapabilities? capabilities = null)
         => Search(CanStandAt(start) ? start : StandingPositionFor(start), goal, capabilities);
 
+    public Route? FindRouteWithinReach(Vector3d start, Vector3i target, double reach, MovementCapabilities? capabilities = null)
+    {
+        var origin = StandingBlockFor(start);
+
+        // Not loaded yet: head that way as for any other unknown goal, and look
+        // for somewhere to stand once it is known.
+        if (world.GetBlock(target) is null)
+            return Search(origin, target, capabilities);
+
+        return Explore(
+            origin,
+            position => IsWithinReach(position, target, reach)
+                && position != target
+                && Above(position) != target,
+            target,
+            reach,
+            capabilities ?? MovementCapabilities.Walking,
+            reachesGoal: true,
+            label: target);
+    }
+
+    public Route? FindRouteNear(Vector3d start, Vector3i target, int range, MovementCapabilities? capabilities = null)
+    {
+        var origin = StandingBlockFor(start);
+
+        if (world.GetBlock(target) is null)
+            return Search(origin, target, capabilities);
+
+        return Explore(
+            origin,
+            position => IsNear(position, target, range),
+            target,
+            // The corner of the square is the furthest off the target an
+            // arrival can be, and the estimate must not count that as still to go.
+            range * Math.Sqrt(2),
+            capabilities ?? MovementCapabilities.Walking,
+            reachesGoal: true,
+            label: target);
+    }
+
+    /// <summary>Whether a position is at most some blocks off a target sideways, and at most one up or down.</summary>
+    public static bool IsNear(Vector3i position, Vector3i target, int range)
+        => Math.Abs(position.X - target.X) <= range
+        && Math.Abs(position.Z - target.Z) <= range
+        && Math.Abs(position.Y - target.Y) <= 1;
+
+    /// <summary>
+    /// Whether a block is within reach of a player standing at a position,
+    /// measured from the eyes of one standing in the middle of it.
+    /// </summary>
+    private static bool IsWithinReach(Vector3i standing, Vector3i target, double reach)
+    {
+        var dx = standing.X - target.X;
+        var dy = standing.Y + EyeHeight - (target.Y + 0.5);
+        var dz = standing.Z - target.Z;
+
+        return dx * dx + dy * dy + dz * dz <= reach * reach;
+    }
+
     private Route? Search(Vector3i origin, Vector3i goal, MovementCapabilities? capabilities)
     {
         var allowed = capabilities ?? MovementCapabilities.Walking;
@@ -216,6 +278,34 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             return null;
         }
 
+        return Explore(origin, position => position == destination, destination, 0, allowed, reachesGoal, goal);
+    }
+
+    /// <summary>
+    /// The A* search itself, towards whatever counts as arriving.
+    /// </summary>
+    /// <param name="isGoal">Whether standing at a position is arriving.</param>
+    /// <param name="towards">Where arriving happens, for the estimate of what is left.</param>
+    /// <param name="slack">
+    /// How far short of <paramref name="towards"/> arriving can already be, so
+    /// that the estimate stays below the real cost.
+    /// </param>
+    /// <param name="label">What the search is for, in the log.</param>
+    private Route? Explore(
+        Vector3i origin,
+        Func<Vector3i, bool> isGoal,
+        Vector3i towards,
+        double slack,
+        MovementCapabilities allowed,
+        bool reachesGoal,
+        Vector3i label)
+    {
+        if (isGoal(origin))
+            return new Route([], reachesGoal, Origin: origin);
+
+        double Estimate(Vector3i from)
+            => Math.Max(0, Heuristic(from, towards, allowed.Diagonals) - slack * WalkCost);
+
         // A node is a position together with the direction it was walked into
         // from, because what a turn costs depends on where the player came from.
         // The same position can therefore be reached as several nodes.
@@ -229,13 +319,13 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
         var costSoFar = new Dictionary<Node, double> { [searchFrom] = 0 };
         var settled = new HashSet<Node>();
 
-        open.Enqueue(searchFrom, Heuristic(origin, destination, allowed.Diagonals));
+        open.Enqueue(searchFrom, Estimate(origin));
 
         var expanded = 0;
 
         while (open.TryDequeue(out var current, out _))
         {
-            if (current.Position == destination)
+            if (isGoal(current.Position))
                 return Reconstruct(cameFrom, searchFrom, current, reachesGoal, origin);
 
             // The queue has no decrease-key, so a node can sit in it more than
@@ -246,7 +336,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
 
             if (++expanded > MaxExpandedNodes)
             {
-                logger.LogDebug("Gave up looking for a path to {Goal} after {Expanded} positions", goal, expanded);
+                logger.LogDebug("Gave up looking for a path to {Goal} after {Expanded} positions", label, expanded);
 
                 return null;
             }
@@ -267,11 +357,11 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
                 costSoFar[next] = cost;
                 cameFrom[next] = (current, move);
 
-                open.Enqueue(next, cost + Heuristic(move.To, destination, allowed.Diagonals));
+                open.Enqueue(next, cost + Estimate(move.To));
             }
         }
 
-        logger.LogDebug("No path from {Start} to {Goal}", origin, goal);
+        logger.LogDebug("No path from {Start} to {Goal}", origin, label);
 
         return null;
     }

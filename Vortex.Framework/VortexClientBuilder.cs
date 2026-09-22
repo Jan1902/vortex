@@ -36,7 +36,6 @@ public class VortexClientBuilder
             typeof(BehaviourModule)
         ];
 
-    private readonly List<Type> _loadedTasks = [];
 
     /// <summary>
     /// Sets the hostname and port to connect to.
@@ -106,21 +105,6 @@ public class VortexClientBuilder
     }
 
     /// <summary>
-    /// Registers a task so that it can be resolved with its managers filled in,
-    /// either through an injected <c>Func&lt;..., TTask&gt;</c> factory or
-    /// through <see cref="IBotBrain.CreateTask{TTask}"/>. Tasks that ship with
-    /// Vortex are registered already; this is for your own.
-    /// </summary>
-    /// <typeparam name="TTask">The type of the task to register.</typeparam>
-    /// <returns>The current instance of <see cref="VortexClientBuilder"/>.</returns>
-    public VortexClientBuilder AddTask<TTask>() where TTask : BotTask
-    {
-        _loadedTasks.Add(typeof(TTask));
-
-        return this;
-    }
-
-    /// <summary>
     /// Builds an instance of <see cref="IVortexClient"/> using the configured settings.
     /// </summary>
     /// <returns>An instance of <see cref="IVortexClient"/>.</returns>
@@ -147,9 +131,6 @@ public class VortexClientBuilder
             var instance = (IModule)Activator.CreateInstance(module)!;
             instance.Load(containerBuilder);
         }
-
-        foreach (var task in _loadedTasks)
-            containerBuilder.RegisterType(task).AsSelf();
 
         var container = containerBuilder.Build();
 

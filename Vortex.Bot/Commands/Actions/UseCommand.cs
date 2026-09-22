@@ -12,5 +12,5 @@ public sealed class UseCommand : TaskCommand
     public Vector3i Block { get; set; } = null!;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<UseBlockTask>(Block));
+        => Task.FromResult<BotTask?>(new UseBlockTask(Block));
 }
