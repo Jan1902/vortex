@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Regenerates the game data that the source generators consume: packet IDs,
-# registries, blocks, items, tags, recipes and block loot tables.
+# registries, blocks, items, enchantments, tags, recipes and block loot tables.
 #
 # The data comes from the vanilla server's own data generator, so it is always
 # exactly what the target version speaks. Updating Vortex to a new Minecraft
@@ -74,6 +74,7 @@ copy reports/items.json                   "${DATA}/items.json"
 copy data/minecraft/tags/block            "${DATA}/tags/block"
 copy data/minecraft/tags/item             "${DATA}/tags/item"
 copy data/minecraft/tags/entity_type      "${DATA}/tags/entity_type"
+copy data/minecraft/enchantment           "${DATA}/enchantment"
 copy data/minecraft/recipe                "${DATA}/recipe"
 copy data/minecraft/loot_table/blocks     "${DATA}/loot_table/blocks"
 

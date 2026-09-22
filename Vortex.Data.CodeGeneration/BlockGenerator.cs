@@ -49,12 +49,14 @@ public sealed class BlockGenerator : IIncrementalGenerator
             if (registry is null)
                 return;
 
-            var blocks = SimpleJson.Parse(files.Left.Text)
+            var report = SimpleJson.Parse(files.Left.Text);
+
+            var blocks = report
                 .Select(block => ReadBlock(block.Key, (JsonObject)block.Value!, registry))
                 .OrderBy(block => block.Id)
                 .ToList();
 
-            var properties = ClassifyProperties(blocks);
+            var properties = BlockPropertyKinds.Classify(report);
 
             foreach (var block in blocks)
                 if (Validate(block, properties) is { } problem)
@@ -84,38 +86,6 @@ public sealed class BlockGenerator : IIncrementalGenerator
         var id = (registry.GetObject(name) ?? throw new InvalidOperationException($"The block '{name}' is missing from the registry.")).GetInt("protocol_id")!.Value;
 
         return new BlockData(name, id, properties, states);
-    }
-
-    /// <summary>
-    /// Works out for every property name whether it holds a bool, a number or
-    /// one of a set of names. The same name can have different values on
-    /// different blocks, so the set of names is the union of all of them.
-    /// </summary>
-    private static SortedDictionary<string, PropertyKind> ClassifyProperties(IEnumerable<BlockData> blocks)
-    {
-        var values = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
-
-        foreach (var property in blocks.SelectMany(block => block.Properties))
-        {
-            if (!values.TryGetValue(property.Name, out var set))
-                values[property.Name] = set = new SortedSet<string>(StringComparer.Ordinal);
-
-            set.UnionWith(property.Values);
-        }
-
-        var kinds = new SortedDictionary<string, PropertyKind>(StringComparer.Ordinal);
-
-        foreach (var property in values)
-        {
-            if (property.Value.All(value => value is "true" or "false"))
-                kinds[property.Key] = new PropertyKind(PropertyType.Bool, []);
-            else if (property.Value.All(value => value.All(char.IsDigit)))
-                kinds[property.Key] = new PropertyKind(PropertyType.Int, []);
-            else
-                kinds[property.Key] = new PropertyKind(PropertyType.Enum, [.. property.Value]);
-        }
-
-        return kinds;
     }
 
     /// <summary>
@@ -207,27 +177,4 @@ public sealed class BlockGenerator : IIncrementalGenerator
     private sealed record PropertyData(string Name, List<string> Values);
 
     private sealed record StateData(int Id, Dictionary<string, string> Properties, bool IsDefault);
-
-    private enum PropertyType
-    {
-        Bool,
-        Int,
-        Enum
-    }
-
-    /// <param name="EnumValues">The names an enum property can take, in the order of the generated enum.</param>
-    private sealed record PropertyKind(PropertyType Type, List<string> EnumValues)
-    {
-        /// <summary>
-        /// The number a value is stored as: 1 or 0 for a bool, the number itself,
-        /// or the value's position in the generated enum.
-        /// </summary>
-        public string Encode(string value)
-            => Type switch
-            {
-                PropertyType.Bool => value == "true" ? "1" : "0",
-                PropertyType.Int => value,
-                _ => EnumValues.IndexOf(value).ToString(),
-            };
-    }
 }
