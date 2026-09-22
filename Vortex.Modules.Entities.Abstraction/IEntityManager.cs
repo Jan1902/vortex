@@ -35,4 +35,19 @@ public interface IEntityManager
     /// <param name="filter">Restricts which entities count, such as only zombies.</param>
     /// <returns>The closest entity, or <c>null</c> if none qualifies.</returns>
     Entity? Nearest(Vector3d from, Func<Entity, bool>? filter = null);
+
+    /// <summary>
+    /// Every player on the server, as the tab list shows them, whether near
+    /// enough to be tracked as an entity or not.
+    /// </summary>
+    IReadOnlyCollection<PlayerListEntry> Players { get; }
+
+    /// <summary>Gets a player's tab list entry by the account's UUID.</summary>
+    PlayerListEntry? GetPlayer(Guid uuid);
+
+    /// <summary>
+    /// Finds a player's entity by name, ignoring case.
+    /// </summary>
+    /// <returns>The entity, or <c>null</c> if no such player is online or near enough to be tracked.</returns>
+    Entity? FindPlayer(string name);
 }

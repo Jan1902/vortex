@@ -21,11 +21,14 @@ internal class EntityPacketHandler(
     IPacketHandler<TeleportEntity>,
     IPacketHandler<SetEntityMotion>,
     IPacketHandler<RotateHead>,
-    IPacketHandler<RemoveEntities>
+    IPacketHandler<RemoveEntities>,
+    IPacketHandler<PlayerInfoUpdate>,
+    IPacketHandler<PlayerInfoRemove>
 {
     public Task HandleAsync(LoginPlay packet)
     {
         entities.Reset(packet.EntityId);
+        entities.ClearPlayers();
 
         logger.LogDebug("Playing as entity {EntityId}", packet.EntityId);
 
@@ -116,6 +119,27 @@ internal class EntityPacketHandler(
 
             await eventBus.PublishAsync(new EntityRemovedEvent(entity));
         }
+    }
+
+    public Task HandleAsync(PlayerInfoUpdate packet)
+    {
+        foreach (var entry in packet.Entries)
+        {
+            entities.UpdatePlayer(entry.Uuid, entry.Name, entry.GameMode, entry.Listed, entry.Latency);
+
+            if (entry.Name is not null)
+                logger.LogDebug("Player {Name} is online", entry.Name);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task HandleAsync(PlayerInfoRemove packet)
+    {
+        foreach (var uuid in packet.Uuids)
+            entities.RemovePlayer(uuid);
+
+        return Task.CompletedTask;
     }
 
     private async Task Spawned(Entity entity)

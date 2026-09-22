@@ -22,6 +22,7 @@ internal class EntityManager : IEntityManager
 
     private readonly ConcurrentDictionary<int, Entity> _entities = new();
     private readonly ConcurrentDictionary<Guid, int> _idsByUuid = new();
+    private readonly ConcurrentDictionary<Guid, PlayerListEntry> _players = new();
 
     public int? SelfId { get; private set; }
 
@@ -37,6 +38,45 @@ internal class EntityManager : IEntityManager
         => _entities.Values
             .Where(entity => filter?.Invoke(entity) ?? true)
             .MinBy(entity => entity.Position.DistanceTo(from));
+
+    public IReadOnlyCollection<PlayerListEntry> Players => [.. _players.Values];
+
+    public PlayerListEntry? GetPlayer(Guid uuid)
+        => _players.TryGetValue(uuid, out var player) ? player : null;
+
+    public Entity? FindPlayer(string name)
+        => _players.Values.FirstOrDefault(player => string.Equals(player.Name, name, StringComparison.OrdinalIgnoreCase)) is { } player
+            ? Get(player.Uuid)
+            : null;
+
+    /// <summary>
+    /// Adds a player to the tab list or changes its entry. Parts the update does
+    /// not carry keep their value.
+    /// </summary>
+    public void UpdatePlayer(Guid uuid, string? name, GameMode? gameMode, bool? listed, int? latency)
+    {
+        var player = _players.TryGetValue(uuid, out var known)
+            ? known
+            : new PlayerListEntry(uuid, name ?? "", GameMode.Survival, 0, Listed: false);
+
+        _players[uuid] = player with
+        {
+            Name = name ?? player.Name,
+            GameMode = gameMode ?? player.GameMode,
+            Listed = listed ?? player.Listed,
+            Latency = latency ?? player.Latency,
+        };
+    }
+
+    public void RemovePlayer(Guid uuid)
+        => _players.TryRemove(uuid, out _);
+
+    /// <summary>
+    /// Forgets the players of a previous session. Unlike the entities, the tab
+    /// list survives respawning and changing worlds.
+    /// </summary>
+    public void ClearPlayers()
+        => _players.Clear();
 
     /// <summary>
     /// Starts over in a new world, forgetting every entity of the old one.

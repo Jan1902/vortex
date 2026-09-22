@@ -50,7 +50,10 @@ internal class VortexClientFacade(
 
     private void SetupEventPassThroughs()
     {
-        eventBus.RegisterProxyHandler<ChatMessageReceivedEvent, ChatMessageReceivedEventArgs>(ChatMessageReceived, (e) => new(e.Message));
+        eventBus.RegisterProxyHandler<ChatMessageReceivedEvent, ChatMessageReceivedEventArgs>(ChatMessageReceived, (e) => new(
+            e.Message,
+            e.Sender,
+            e.Sender is { } sender ? entities.GetPlayer(sender)?.Name : null));
     }
 
     public Task SendChatMessage(string message)

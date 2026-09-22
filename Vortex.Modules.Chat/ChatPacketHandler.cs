@@ -14,18 +14,18 @@ internal class ChatPacketHandler(ILogger<ChatPacketHandler> logger, IEventBus ev
         => PublishMessage(ChatComponent.ToPlainText(packet.Text));
 
     public Task HandleAsync(PlayerChatMessage packet)
-        => PublishMessage(packet.Message);
+        => PublishMessage(packet.Message, packet.Sender);
 
     public Task HandleAsync(DisguisedChatMessage packet)
         => PublishMessage(ChatComponent.ToPlainText(packet.Message));
 
-    private async Task PublishMessage(string text)
+    private async Task PublishMessage(string text, Guid? sender = null)
     {
         if (string.IsNullOrEmpty(text))
             return;
 
         logger.LogInformation("Received chat message with text '{Text}'", text);
 
-        await eventBus.PublishAsync(new ChatMessageReceivedEvent(text));
+        await eventBus.PublishAsync(new ChatMessageReceivedEvent(text, sender));
     }
 }

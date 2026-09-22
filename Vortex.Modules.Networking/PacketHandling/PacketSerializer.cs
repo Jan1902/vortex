@@ -44,7 +44,8 @@ public class PacketSerializer
                 var customAttribute = packetType.GetCustomAttributes(true).FirstOrDefault(a => a.GetType().IsClosedTypeOf(typeof(CustomSerializedAttribute<,>)))
                     ?? throw new Exception("Packet definition is missing AutoParsed or CustomParsed attribute");
 
-                mappings.Add(new FullPacketMapping(packetType, packetId, customAttribute.GetType().GetGenericArguments().Last()));
+                // The attribute is CustomSerialized<TSerializer, TPacket>: the serializer comes first.
+                mappings.Add(new FullPacketMapping(packetType, packetId, customAttribute.GetType().GetGenericArguments()[0]));
             }
         }
 

@@ -21,9 +21,6 @@ public record ConfirmTeleportation(int TeleportId) : PacketBase;
 [AutoSerializedPacket(PacketIds.Play.ClientBound.PlayerAbilities)]
 public record PlayerAbilities : PacketBase;
 
-[AutoSerializedPacket(PacketIds.Play.ClientBound.PlayerInfoUpdate)]
-public record PlayerInfoUpdate : PacketBase;
-
 [AutoSerializedPacket(PacketIds.Play.ClientBound.SetDefaultSpawnPosition)]
 public record SetDefaultSpawnPosition : PacketBase;
 

@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vortex.Modules.Entities\Vortex.Modules.Entities.csproj" />
+    <!-- The real reader and writer, so hand-written serializers are tested against the wire format. -->
+    <ProjectReference Include="..\Vortex.Modules.Networking\Vortex.Modules.Networking.csproj" />
   </ItemGroup>
 
   <ItemGroup>
