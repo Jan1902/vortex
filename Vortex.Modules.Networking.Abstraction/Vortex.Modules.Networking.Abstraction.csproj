@@ -12,4 +12,9 @@
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Mojang's packet report, see scripts/update-protocol-data.sh. PacketIds is generated from it. -->
+    <AdditionalFiles Include="Resources\packets.json" />
+  </ItemGroup>
+
 </Project>

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Regenerates the protocol data that the source generators consume.
+# Regenerates the game data that the source generators consume: packet IDs,
+# registries, blocks, items, tags, recipes and block loot tables.
 #
 # The data comes from the vanilla server's own data generator, so it is always
 # exactly what the target version speaks. Updating Vortex to a new Minecraft
@@ -49,16 +50,38 @@ fi
 
 echo "Running the data generator (${JAR})..."
 docker exec "${CONTAINER}" sh -c \
-    "cd /tmp && java -DbundlerMainClass=net.minecraft.data.Main -jar ${JAR} --reports" >/dev/null
+    "cd /tmp && java -DbundlerMainClass=net.minecraft.data.Main -jar ${JAR} --reports --server" >/dev/null
 
-echo "Copying reports into the repository..."
-docker cp "${CONTAINER}:/tmp/generated/reports/packets.json" \
-    "${REPO_ROOT}/Vortex.Modules.Networking.CodeGeneration/Resources/packets.json"
+GENERATED="/tmp/generated"
+NETWORKING="${REPO_ROOT}/Vortex.Modules.Networking.Abstraction/Resources"
+DATA="${REPO_ROOT}/Vortex.Data/Resources"
+
+# Copies one generated file or folder, replacing what was there so entries that
+# no longer exist in the new version disappear as well.
+copy() {
+    local source="$1" target="$2"
+
+    rm -rf "${target}"
+    mkdir -p "$(dirname "${target}")"
+    docker cp "${CONTAINER}:${GENERATED}/${source}" "${target}" >/dev/null
+}
+
+echo "Copying the data into the repository..."
+copy reports/packets.json                 "${NETWORKING}/packets.json"
+copy reports/registries.json              "${DATA}/registries.json"
+copy reports/blocks.json                  "${DATA}/blocks.json"
+copy reports/items.json                   "${DATA}/items.json"
+copy data/minecraft/tags/block            "${DATA}/tags/block"
+copy data/minecraft/tags/item             "${DATA}/tags/item"
+copy data/minecraft/tags/entity_type      "${DATA}/tags/entity_type"
+copy data/minecraft/recipe                "${DATA}/recipe"
+copy data/minecraft/loot_table/blocks     "${DATA}/loot_table/blocks"
 
 echo
 echo "Done. Review the diff, then rebuild:"
-echo "  git diff --stat Vortex.Modules.Networking.CodeGeneration/Resources/"
+echo "  git diff --stat Vortex.Modules.Networking.Abstraction/Resources/ Vortex.Data/Resources/"
 echo "  dotnet build Vortex.sln"
 echo
-echo "Packet IDs are regenerated automatically. Packet *layouts* are not -"
-echo "fields that changed between versions still have to be adjusted by hand."
+echo "Packet IDs, registries, blocks, tags, recipes and loot tables are all"
+echo "regenerated from this. Packet *layouts* are not - fields that changed"
+echo "between versions still have to be adjusted by hand."

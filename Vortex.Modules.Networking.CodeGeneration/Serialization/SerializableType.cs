@@ -1,3 +1,5 @@
+using Vortex.CodeGeneration;
+
 namespace Vortex.Modules.Networking.CodeGeneration.Serialization;
 
 /// <summary>

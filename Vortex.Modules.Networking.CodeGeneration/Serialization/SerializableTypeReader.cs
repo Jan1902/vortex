@@ -4,6 +4,7 @@ using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Vortex.CodeGeneration;
 
 namespace Vortex.Modules.Networking.CodeGeneration.Serialization;
 

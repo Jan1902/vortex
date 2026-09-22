@@ -1,6 +1,5 @@
 using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+using Vortex.CodeGeneration;
 
 namespace Vortex.Modules.Networking.CodeGeneration.Serialization;
 
@@ -31,7 +30,7 @@ internal static class SerializerRenderer
             .Set("deserialize", string.Join("\n", type.Fields.Select(RenderRead).Append(construct)))
             .Render();
 
-        return CSharpSyntaxTree.ParseText(code).GetRoot().NormalizeWhitespace(eol: "\n").ToFullString();
+        return CodeFormatter.Format(code);
     }
 
     private static string RenderWrite(SerializedField field)
