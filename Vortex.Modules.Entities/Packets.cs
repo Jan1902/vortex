@@ -99,6 +99,14 @@ public record SetEntityMotion(int EntityId, short VelocityX, short VelocityY, sh
 [AutoSerializedPacket(PacketIds.Play.ClientBound.RotateHead)]
 public record RotateHead(int EntityId, [OverwriteType(OverwriteType.Angle)] float HeadYaw) : PacketBase;
 
+/// <summary>
+/// An entity picked up an item, arrow or experience orb. Sent just before the
+/// picked up entity is removed, or with a smaller count when only part of the
+/// stack fit.
+/// </summary>
+[AutoSerializedPacket(PacketIds.Play.ClientBound.TakeItemEntity)]
+public record TakeItemEntity(int CollectedEntityId, int CollectorEntityId, int Count) : PacketBase;
+
 /// <summary>Entities are gone, or out of tracking range.</summary>
 [AutoSerializedPacket(PacketIds.Play.ClientBound.RemoveEntities)]
 public record RemoveEntities(int[] EntityIds) : PacketBase;

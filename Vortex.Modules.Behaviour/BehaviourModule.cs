@@ -18,5 +18,6 @@ public class BehaviourModule : IModule
         // IBotBrain.CreateTask.
         builder.RegisterType<WithinReachTask>().AsSelf();
         builder.RegisterType<GoToTask>().AsSelf();
+        builder.RegisterType<CollectItemsTask>().AsSelf();
     }
 }

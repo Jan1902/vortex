@@ -24,7 +24,8 @@ internal class EntityPacketHandler(
     IPacketHandler<RemoveEntities>,
     IPacketHandler<PlayerInfoUpdate>,
     IPacketHandler<PlayerInfoRemove>,
-    IPacketHandler<SetEntityData>
+    IPacketHandler<SetEntityData>,
+    IPacketHandler<TakeItemEntity>
 {
     public Task HandleAsync(LoginPlay packet)
     {
@@ -151,6 +152,16 @@ internal class EntityPacketHandler(
             logger.LogTrace("Read {Count} metadata values of entity {EntityId} before one that cannot be read", packet.Values.Length, packet.EntityId);
 
         return Task.CompletedTask;
+    }
+
+    public async Task HandleAsync(TakeItemEntity packet)
+    {
+        if (entities.Get(packet.CollectedEntityId) is not { } item)
+            return;
+
+        logger.LogDebug("Entity {CollectorId} picked up {Count} of entity {EntityId} ({Type})", packet.CollectorEntityId, packet.Count, item.Id, item.Type);
+
+        await eventBus.PublishAsync(new ItemPickedUpEvent(item, packet.CollectorEntityId, packet.Count));
     }
 
     private async Task Spawned(Entity entity)

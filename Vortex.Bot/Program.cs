@@ -118,6 +118,19 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(nearby.Count == 0 ? "Nobody around" : string.Join(", ", nearby));
     }
 
+    if (parts[1] == "collect")
+    {
+        // Everything lying within a radius of where the bot stands now.
+        var radius = parts.Length > 2 && Coordinates.TryParseCoordinate(parts[2], out var given) ? given : 16;
+        var task = client.Brain.CreateTask<CollectItemsTask>(client.Position, radius);
+
+        await client.SendChatMessage($"On it: {task.Description}");
+
+        var result = await client.Brain.RunAsync(task);
+
+        await client.SendChatMessage(result.ToString());
+    }
+
     if (parts[1] == "inv")
     {
         var inventory = client.Inventory;

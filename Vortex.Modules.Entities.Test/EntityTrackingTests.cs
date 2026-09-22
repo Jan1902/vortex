@@ -124,6 +124,19 @@ public class EntityTrackingTests
         Assert.Null(_entities.Nearest(Vector3d.Zero, e => e.Type == EntityType.Creeper));
     }
 
+    [Fact]
+    public async Task ReportsWhoPickedUpWhat()
+    {
+        await _handler.HandleAsync(new AddEntity(60, Guid.NewGuid(), EntityType.Item, 0, 64, 0, 0, 0, 0, 1, 0, 0, 0));
+
+        await _handler.HandleAsync(new TakeItemEntity(60, SelfId, 3));
+
+        var pickedUp = Assert.IsType<ItemPickedUpEvent>(_events.Events.Last());
+        Assert.Equal(60, pickedUp.Item.Id);
+        Assert.Equal(SelfId, pickedUp.CollectorId);
+        Assert.Equal(3, pickedUp.Count);
+    }
+
     private Task SpawnZombie()
         => _handler.HandleAsync(new AddEntity(ZombieId, ZombieUuid, EntityType.Zombie, 10.5, 64, -3.5, 0, 90f, 90f, 0, 0, 0, 0));
 }
