@@ -40,4 +40,10 @@ internal static class Naming
     /// </summary>
     public static string ToLiteral(string value)
         => SyntaxFactory.Literal(value).ToString();
+
+    /// <summary>
+    /// Writes a character as a C# character literal.
+    /// </summary>
+    public static string ToLiteral(char value)
+        => SyntaxFactory.Literal(value).ToString();
 }
