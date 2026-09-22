@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\Vortex.CodeGeneration.Shared\CodeGeneration.props" />
+
+</Project>
