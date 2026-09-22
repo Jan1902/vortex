@@ -5,6 +5,7 @@ using Vortex.Framework.Abstraction;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Chat.Abstraction;
 using Vortex.Modules.Entities.Abstraction;
+using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 using Vortex.Modules.World.Abstraction;
@@ -21,6 +22,7 @@ internal class VortexClientFacade(
     IMovementController movement,
     IBotBrain brain,
     IEntityManager entities,
+    IInventoryManager inventory,
     ILogger<VortexClientFacade> logger,
     EventBus eventBus) : IVortexClient
 {
@@ -82,4 +84,7 @@ internal class VortexClientFacade(
 
     public IEntityManager Entities
         => entities;
+
+    public IInventoryManager Inventory
+        => inventory;
 }

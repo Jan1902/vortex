@@ -56,6 +56,7 @@ internal sealed record SerializableType(
 /// <param name="Variable">The local the deserializer reads it into.</param>
 /// <param name="ValueType">The field's type without nullability, e.g. <c>int</c> or <c>global::Foo[]</c>.</param>
 /// <param name="ElementType">The type of a single element; the same as <paramref name="ValueType"/> for <see cref="FieldShape.Single"/>.</param>
+/// <param name="ArrayElementType">The element type an array is created with, keeping <c>?</c> on elements that may be empty.</param>
 /// <param name="Method">The reader and writer method suffix of an element, or <c>null</c> for a model and for shapes with a template of their own.</param>
 /// <param name="Serializer">The serializer of a model element, or <c>null</c> for a primitive.</param>
 /// <param name="WriteCast">A cast applied before writing, e.g. <c>(int)</c> for an enum.</param>
@@ -68,6 +69,7 @@ internal sealed record SerializedField(
     FieldShape Shape,
     string ValueType,
     string ElementType,
+    string ArrayElementType,
     string? Method,
     string? Serializer,
     string WriteCast,

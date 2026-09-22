@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="../ProjectConfiguration.Base.csproj" />
+    <Import Project="../ProjectConfiguration.Module.csproj" />
+
+    <ItemGroup>
+      <ProjectReference Include="..\Vortex.Modules.Inventory.Abstraction\Vortex.Modules.Inventory.Abstraction.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="Vortex.Modules.Inventory.Test" />
+    </ItemGroup>
+
+</Project>

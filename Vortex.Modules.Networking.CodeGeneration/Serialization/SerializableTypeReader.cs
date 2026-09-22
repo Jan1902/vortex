@@ -24,6 +24,9 @@ internal static class SerializableTypeReader
 
     private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
+    private static readonly SymbolDisplayFormat NullableTypeFormat = SymbolDisplayFormat.FullyQualifiedFormat
+        .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
     /// <summary>
     /// Reader and writer methods for the types the protocol has a direct encoding for.
     /// </summary>
@@ -103,23 +106,25 @@ internal static class SerializableTypeReader
         var isConditional = Find(attributes, "ConditionalAttribute") is not null;
 
         if (Find(attributes, "BitSetAttribute") is { } bitSet)
-            return new SerializedField(name, variable, FieldShape.BitSet, valueType, "bool", null, null, "", "", IntArgument(bitSet), isConditional);
+            return new SerializedField(name, variable, FieldShape.BitSet, valueType, "bool", "bool", null, null, "", "", IntArgument(bitSet), isConditional);
 
         var fixedLength = Find(attributes, "LengthAttribute") is { } length ? IntArgument(length) : null;
 
         var shape = FieldShape.Single;
         var element = type;
+        var arrayElementType = "";
 
         if (type is IArrayTypeSymbol array)
         {
             element = WithoutNullability(array.ElementType);
+            arrayElementType = array.ElementType.ToDisplayString(NullableTypeFormat);
             shape = element.SpecialType == SpecialType.System_Byte ? FieldShape.Bytes : FieldShape.Array;
         }
 
         var elementType = element.ToDisplayString(TypeFormat);
 
         if (shape == FieldShape.Bytes)
-            return new SerializedField(name, variable, shape, valueType, elementType, null, null, "", "", fixedLength, isConditional);
+            return new SerializedField(name, variable, shape, valueType, elementType, arrayElementType, null, null, "", "", fixedLength, isConditional);
 
         var isEnum = element.TypeKind == TypeKind.Enum;
 
@@ -137,7 +142,7 @@ internal static class SerializableTypeReader
         var writeCast = castsEnum ? $"({MethodValueTypes[method!]})" : "";
         var readCast = castsEnum ? $"({elementType})" : "";
 
-        return new SerializedField(name, variable, shape, valueType, elementType, method, serializer, writeCast, readCast, fixedLength, isConditional);
+        return new SerializedField(name, variable, shape, valueType, elementType, arrayElementType, method, serializer, writeCast, readCast, fixedLength, isConditional);
     }
 
     private static ITypeSymbol WithoutNullability(ITypeSymbol type)

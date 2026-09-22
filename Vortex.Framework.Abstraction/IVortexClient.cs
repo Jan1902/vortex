@@ -2,6 +2,7 @@
 using Vortex.Shared;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Entities.Abstraction;
+using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Modules.Player.Abstraction;
 
 namespace Vortex.Framework.Abstraction;
@@ -71,6 +72,11 @@ public interface IVortexClient
     /// Gets the entities around the bot: players, mobs, items on the ground.
     /// </summary>
     IEntityManager Entities { get; }
+
+    /// <summary>
+    /// Gets the inventory, and whatever container is open on top of it.
+    /// </summary>
+    IInventoryManager Inventory { get; }
 
     /// <summary>
     /// Event that is raised when a chat message is received.

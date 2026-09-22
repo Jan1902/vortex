@@ -118,6 +118,21 @@ async Task HandleChatMessage(ChatMessageReceivedEventArgs chat)
         await client.SendChatMessage(nearby.Count == 0 ? "Nobody around" : string.Join(", ", nearby));
     }
 
+    if (parts[1] == "inv")
+    {
+        var inventory = client.Inventory;
+        var carried = inventory.Find(_ => true)
+            .GroupBy(found => found.Stack.Item)
+            .Select(group => $"{group.Sum(found => found.Stack.Count)}x {group.Key}")
+            .ToList();
+
+        var held = inventory.HeldItem is { } stack
+            ? $"{stack.Item}" + (stack.MaxDamage > 0 ? $" ({stack.MaxDamage - stack.Damage}/{stack.MaxDamage})" : "")
+            : "nothing";
+
+        await client.SendChatMessage($"Holding {held}. " + (carried.Count == 0 ? "Carrying nothing" : "Carrying " + string.Join(", ", carried)));
+    }
+
     if (parts[1] == "doing")
     {
         var stack = client.Brain.CurrentStack;

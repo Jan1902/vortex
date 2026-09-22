@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Vortex.Modules.Player\Vortex.Modules.Player.csproj" />
     <ProjectReference Include="..\Vortex.Modules.World\Vortex.Modules.World.csproj" />
     <ProjectReference Include="..\Vortex.Modules.Entities\Vortex.Modules.Entities.csproj" />
+    <ProjectReference Include="..\Vortex.Modules.Inventory\Vortex.Modules.Inventory.csproj" />
   </ItemGroup>
 
 </Project>

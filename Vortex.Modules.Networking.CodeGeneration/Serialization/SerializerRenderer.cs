@@ -95,7 +95,7 @@ internal static class SerializerRenderer
                 .Set("lengthPrefix", ReadLengthPrefix(field))
                 .Set("target", target)
                 .Set("variable", field.Variable)
-                .Set("elementType", field.ElementType)
+                .Set("elementType", field.ArrayElementType)
                 .Set("length", Length(field))
                 .Set("value", ReadElement(field)),
             _ => Reading("Assign")
