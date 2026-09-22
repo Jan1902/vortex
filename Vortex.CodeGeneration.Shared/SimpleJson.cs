@@ -16,6 +16,17 @@ namespace Vortex.CodeGeneration;
 /// </remarks>
 internal static class SimpleJson
 {
+    /// <summary>
+    /// Parses a document whose root is an array.
+    /// </summary>
+    public static List<object?> ParseArray(string text)
+    {
+        var position = 0;
+
+        return ParseValue(text, ref position) as List<object?>
+            ?? throw new FormatException("Expected the document to be a JSON array");
+    }
+
     public static JsonObject Parse(string text)
     {
         var position = 0;

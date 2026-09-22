@@ -23,7 +23,8 @@ internal class EntityPacketHandler(
     IPacketHandler<RotateHead>,
     IPacketHandler<RemoveEntities>,
     IPacketHandler<PlayerInfoUpdate>,
-    IPacketHandler<PlayerInfoRemove>
+    IPacketHandler<PlayerInfoRemove>,
+    IPacketHandler<SetEntityData>
 {
     public Task HandleAsync(LoginPlay packet)
     {
@@ -138,6 +139,16 @@ internal class EntityPacketHandler(
     {
         foreach (var uuid in packet.Uuids)
             entities.RemovePlayer(uuid);
+
+        return Task.CompletedTask;
+    }
+
+    public Task HandleAsync(SetEntityData packet)
+    {
+        entities.SetData(packet.EntityId, packet.Values);
+
+        if (!packet.Complete)
+            logger.LogTrace("Read {Count} metadata values of entity {EntityId} before one that cannot be read", packet.Values.Length, packet.EntityId);
 
         return Task.CompletedTask;
     }

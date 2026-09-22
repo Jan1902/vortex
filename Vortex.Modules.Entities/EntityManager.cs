@@ -126,6 +126,16 @@ internal class EntityManager : IEntityManager
     public void SetVelocity(int id, short x, short y, short z)
         => Update(id, entity => entity with { Velocity = ToVelocity(x, y, z) });
 
+    /// <summary>
+    /// Merges metadata values into what is known; values the update does not
+    /// carry keep theirs.
+    /// </summary>
+    public void SetData(int id, IEnumerable<EntityDataValue> values)
+        => Update(id, entity => entity with
+        {
+            Metadata = entity.Metadata.SetItems(values.Select(value => new KeyValuePair<int, object?>(value.Index, value.Value))),
+        });
+
     public void TurnHead(int id, float headYaw)
         => Update(id, entity => entity with { HeadYaw = headYaw });
 

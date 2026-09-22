@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Vortex.Data;
 using Vortex.Shared;
 
@@ -45,4 +47,41 @@ public sealed record Entity(
     /// point to aim at.
     /// </summary>
     public Vector3d Center => Position + new Vector3d(0, AssumedSize / 2, 0);
+
+    /// <summary>
+    /// The entity's metadata as the server sent it, by index. What an index means
+    /// depends on <see cref="Type"/>; <see cref="TryGetData"/> looks values up by name.
+    /// </summary>
+    public ImmutableDictionary<int, object?> Metadata { get; init; } = ImmutableDictionary<int, object?>.Empty;
+
+    /// <summary>
+    /// Reads a metadata value by name.
+    /// </summary>
+    /// <returns>
+    /// Whether the entity has the field, the server has sent it, and it holds a
+    /// <typeparamref name="T"/>.
+    /// </returns>
+    public bool TryGetData<T>(EntityDataKey key, [MaybeNullWhen(false)] out T value)
+    {
+        if (Metadata.TryGetValue(EntityDataKeys.IndexOf(Type, key), out var stored) && stored is T typed)
+        {
+            value = typed;
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    /// <summary>
+    /// The item an item entity lying on the ground is, or the item an entity such
+    /// as an item frame holds; <c>null</c> for anything else.
+    /// </summary>
+    public ItemStack? Item => TryGetData<ItemStack>(EntityDataKey.Item, out var item) ? item : null;
+
+    /// <summary>The health of a living entity, or <c>null</c> if unknown or not living.</summary>
+    public float? Health => TryGetData<float>(EntityDataKey.Health, out var health) ? health : null;
+
+    /// <summary>The name given with a name tag, as a text component, if any.</summary>
+    public NbtTag? CustomName => TryGetData<NbtTag>(EntityDataKey.CustomName, out var name) ? name : null;
 }

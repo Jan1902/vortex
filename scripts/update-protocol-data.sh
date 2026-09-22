@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 #
 # Regenerates the game data that the source generators consume: packet IDs,
-# registries, blocks, items, enchantments, tags, recipes and block loot tables.
+# registries, blocks, items, enchantments, tags, recipes and block loot tables,
+# plus the names of entity metadata fields.
 #
 # The data comes from the vanilla server's own data generator, so it is always
-# exactly what the target version speaks. Updating Vortex to a new Minecraft
+# exactly what the target version speaks. Only the metadata names, which the
+# game does not export, come from PrismarineJS. Updating Vortex to a new Minecraft
 # version starts by running this against that version.
 #
 # Usage:
@@ -78,11 +80,35 @@ copy data/minecraft/enchantment           "${DATA}/enchantment"
 copy data/minecraft/recipe                "${DATA}/recipe"
 copy data/minecraft/loot_table/blocks     "${DATA}/loot_table/blocks"
 
+# Mojang's data says nothing about entity metadata: which index of an entity's
+# data means what lives in the game's code. PrismarineJS extracts it per
+# version; dataPaths.json names the folder that covers this one, which is often
+# an older version's.
+PRISMARINE="https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data"
+
+echo "Fetching entity metadata names from PrismarineJS..."
+ENTITIES_PATH="$(curl -sSfL "${PRISMARINE}/dataPaths.json" \
+    | tr -d ' \n\r' \
+    | sed 's/.*"pc":{//' \
+    | grep -o "\"${VERSION}\":{[^}]*}" \
+    | head -1 \
+    | grep -o '"entities":"[^"]*"' \
+    | cut -d'"' -f4 || true)"
+
+if [ -z "${ENTITIES_PATH}" ]; then
+    echo "PrismarineJS has no entity data for ${VERSION} yet" >&2
+    exit 1
+fi
+
+mkdir -p "${DATA}/prismarine"
+curl -sSfL "${PRISMARINE}/${ENTITIES_PATH}/entities.json" -o "${DATA}/prismarine/entities.json"
+echo "Entity metadata names taken from PrismarineJS ${ENTITIES_PATH}"
+
 echo
 echo "Done. Review the diff, then rebuild:"
 echo "  git diff --stat Vortex.Modules.Networking.Abstraction/Resources/ Vortex.Data/Resources/"
 echo "  dotnet build Vortex.sln"
 echo
-echo "Packet IDs, registries, blocks, tags, recipes and loot tables are all"
-echo "regenerated from this. Packet *layouts* are not - fields that changed"
-echo "between versions still have to be adjusted by hand."
+echo "Packet IDs, registries, blocks, tags, recipes, loot tables and entity"
+echo "metadata names are all regenerated from this. Packet *layouts* are not -"
+echo "fields that changed between versions still have to be adjusted by hand."
