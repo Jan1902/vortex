@@ -19,10 +19,16 @@ public abstract class TaskCommand : BotCommand
 
         await context.ReplyAsync($"On it: {task.Description}");
 
-        var result = await context.Client.Brain.RunAsync(task);
+        var result = await context.Client.Brain.RunAsync(task, Policy);
 
         await context.ReplyAsync(result.ToString());
     }
+
+    /// <summary>
+    /// What the task may do along the way. Moving stays out of other people's
+    /// walls unless a command is about gathering.
+    /// </summary>
+    protected virtual BehaviourPolicy Policy => BehaviourPolicy.Default;
 
     /// <summary>
     /// Builds the task to run, through <c>context.Client.Brain.CreateTask</c>.

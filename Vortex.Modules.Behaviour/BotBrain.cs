@@ -24,7 +24,12 @@ internal class BotBrain(
     public IReadOnlyList<string> CurrentStack
         => runner.Stack;
 
-    public async Task<TaskResult> RunAsync(BotTask task, CancellationToken cancellationToken = default)
+    public BehaviourPolicy Policy { get; private set; } = BehaviourPolicy.Default;
+
+    public Task<TaskResult> RunAsync(BotTask task, CancellationToken cancellationToken = default)
+        => RunAsync(task, BehaviourPolicy.Default, cancellationToken);
+
+    public async Task<TaskResult> RunAsync(BotTask task, BehaviourPolicy policy, CancellationToken cancellationToken = default)
     {
         // Whatever is running loses: a new order replaces the old one rather
         // than queueing behind it, the same way a new movement replaces the
@@ -35,6 +40,10 @@ internal class BotBrain(
 
         var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _current = cancellation;
+
+        // One tree runs at a time, so the policy can simply be the brain's for
+        // as long as it runs, rather than something every task hands down.
+        Policy = policy;
 
         try
         {
@@ -51,6 +60,7 @@ internal class BotBrain(
         }
         finally
         {
+            Policy = BehaviourPolicy.Default;
             _current = null;
             cancellation.Dispose();
             _gate.Release();

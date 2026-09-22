@@ -80,4 +80,25 @@ public abstract class BotTask
     /// </remarks>
     public virtual Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
         => Task.FromResult(TaskResult.Success());
+
+    /// <summary>
+    /// Whether to carry on after a dependency failed, rather than fail with it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For a task with more than one way to its goal. Carrying on means the
+    /// next round asks for dependencies again, so a task that returns true
+    /// here has to make sure that round names something else -- by recording
+    /// the failure as something known about the world, not as progress of its
+    /// own. Otherwise it runs straight back into the same failure, which the
+    /// runner's round limit then ends.
+    /// </para>
+    /// <para>
+    /// Only asked about failures. A cancelled dependency always ends the task.
+    /// </para>
+    /// </remarks>
+    /// <param name="dependency">The dependency that failed, as named by this task.</param>
+    /// <param name="result">How it failed.</param>
+    public virtual bool OnDependencyFailed(BotTask dependency, TaskResult result)
+        => false;
 }

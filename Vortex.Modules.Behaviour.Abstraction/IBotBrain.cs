@@ -29,7 +29,21 @@ public interface IBotBrain
     /// <param name="task">The task to reach the goal of.</param>
     /// <param name="cancellationToken">Cancels the run.</param>
     /// <returns>How the task ended.</returns>
-    Task<TaskResult> RunAsync(BotTask task, CancellationToken cancellationToken = default);
+    Task<TaskResult> RunAsync(BotTask task, CancellationToken cancellationToken = default)
+        => RunAsync(task, BehaviourPolicy.Default, cancellationToken);
+
+    /// <summary>
+    /// Runs a task to completion under a policy that holds for everything it
+    /// turns out to depend on.
+    /// </summary>
+    /// <param name="task">The task to reach the goal of.</param>
+    /// <param name="policy">What the task tree may do: where items may come from, whether it may dig.</param>
+    /// <param name="cancellationToken">Cancels the run.</param>
+    /// <returns>How the task ended.</returns>
+    Task<TaskResult> RunAsync(BotTask task, BehaviourPolicy policy, CancellationToken cancellationToken = default);
+
+    /// <summary>The policy the running task tree works under; the default while idle.</summary>
+    BehaviourPolicy Policy { get; }
 
     /// <summary>
     /// Cancels whatever is running.

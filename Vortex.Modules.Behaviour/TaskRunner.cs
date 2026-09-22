@@ -134,6 +134,16 @@ internal class TaskRunner(ILogger<TaskRunner> logger)
 
                 var dependencyResult = await RunAsync(pending, depth + 1, cancellationToken);
 
+                if (dependencyResult.Outcome == TaskOutcome.Failed && task.OnDependencyFailed(pending, dependencyResult))
+                {
+                    // The task has another way and wants it tried. Whatever it
+                    // names next is a fresh start, not a repeat of this one.
+                    logger.LogDebug("{Indent}trying another way", indent);
+
+                    lastDependency = null;
+                    continue;
+                }
+
                 if (dependencyResult.IsFailure)
                     return (dependencyResult, round);
 

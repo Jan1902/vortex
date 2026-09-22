@@ -1,5 +1,8 @@
 using Autofac;
+using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Framework.Abstraction;
+using Vortex.Modules.Behaviour.Knowledge;
+using Vortex.Modules.Behaviour.Sources;
 using Vortex.Modules.Behaviour.Tasks;
 
 namespace Vortex.Modules.Behaviour;
@@ -29,5 +32,13 @@ public class BehaviourModule : IModule
         builder.RegisterType<CraftTask>().AsSelf();
         builder.RegisterType<AttackTask>().AsSelf();
         builder.RegisterType<UseEntityTask>().AsSelf();
+        builder.RegisterType<ObtainItemsTask>().AsSelf();
+
+        // What the bot knows about the world beyond what it can see right now.
+        builder.RegisterType<FailureMemory>().AsSelf().SingleInstance();
+
+        // Where items can come from. Which of them a task tree may use, and in
+        // what order, is the running policy's call, not the registration order.
+        builder.RegisterType<CraftSource>().As<IItemSource>();
     }
 }

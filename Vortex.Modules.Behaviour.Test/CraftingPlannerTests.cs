@@ -1,4 +1,5 @@
 using Vortex.Data;
+using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks;
 
 namespace Vortex.Modules.Behaviour.Test;
@@ -24,38 +25,52 @@ public class CraftingPlannerTests
     {
         _carried[Item.OakPlanks] = 4;
 
-        Assert.Equal(Recipes.CraftingTable, CraftingPlanner.Choose(Item.CraftingTable, Have));
+        Assert.Equal(Recipes.CraftingTable, CraftingPlanner.Choose(Item.CraftingTable, Have, ObtainChain.Empty));
     }
 
     [Fact]
-    public void LooksThroughIngredientsThatCanBeCraftedFirst()
+    public void ChoosesARecipeEvenWithNothingAtHand()
     {
-        _carried[Item.BirchLog] = 1;
-
-        Assert.Equal(Recipes.Stick, CraftingPlanner.Choose(Item.Stick, Have));
-        Assert.Equal(Item.BirchPlanks, CraftingPlanner.ItemToCraft(Recipes.Stick.Key['#'], Have));
+        // Where the ingredients come from is not crafting's business: they are
+        // asked for, and some source answers.
+        Assert.Equal(Recipes.WoodenPickaxe, CraftingPlanner.Choose(Item.WoodenPickaxe, Have, ObtainChain.Empty));
     }
 
     [Fact]
-    public void GoesSeveralStepsDeep()
+    public void PrefersARecipeItHasEverythingFor()
     {
-        // Logs to planks to sticks, and planks for the head.
-        _carried[Item.OakLog] = 3;
+        // Ingots come from a block or from nuggets; with nuggets at hand, those.
+        _carried[Item.IronNugget] = 9;
 
-        Assert.Equal(Recipes.WoodenPickaxe, CraftingPlanner.Choose(Item.WoodenPickaxe, Have));
+        var recipe = CraftingPlanner.Choose(Item.IronIngot, Have, ObtainChain.Empty);
+
+        Assert.NotNull(recipe);
+        Assert.Contains(CraftingPlanner.Needs(recipe), need => need.Ingredient.Matches(Item.IronNugget));
     }
 
     [Fact]
-    public void FindsNothingWithoutMaterials()
+    public void DoesNotMakeAnythingOutOfWhatIsBeingMadeFurtherUp()
     {
-        Assert.Null(CraftingPlanner.Choose(Item.IronPickaxe, Have));
-        Assert.Contains("IronIngot", CraftingPlanner.Explain(Item.IronPickaxe, Have));
+        // Making iron blocks asks for ingots; those must not come from blocks.
+        var making = ObtainChain.Empty.With([Item.IronBlock]);
+
+        var recipe = CraftingPlanner.Choose(Item.IronIngot, Have, making);
+
+        Assert.NotNull(recipe);
+        Assert.DoesNotContain(CraftingPlanner.Needs(recipe), need => need.Ingredient.Matches(Item.IronBlock));
     }
 
     [Fact]
-    public void DoesNotGoRoundInCircles()
+    public void FindsNoRecipeThatOnlyGoesRoundInCircles()
     {
-        // Iron ingots come from iron blocks and iron nuggets, which come from ingots.
-        Assert.Null(CraftingPlanner.Choose(Item.IronBlock, Have));
+        // Nuggets come only from ingots, which are being made further up.
+        var making = ObtainChain.Empty.With([Item.IronBlock, Item.IronIngot]);
+
+        Assert.Null(CraftingPlanner.Choose(Item.IronNugget, Have, making));
+        Assert.Contains("needs what is being made", CraftingPlanner.Explain(Item.IronNugget));
     }
+
+    [Fact]
+    public void ExplainsAnItemWithoutRecipes()
+        => Assert.Equal("OakLog cannot be crafted", CraftingPlanner.Explain(Item.OakLog));
 }

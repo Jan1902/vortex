@@ -10,29 +10,32 @@ using Vortex.Shared;
 namespace Vortex.Modules.Behaviour.Tasks;
 
 /// <summary>
-/// Crafts an item until the bot carries a number of it, crafting what goes into
-/// it first where that is missing.
+/// Crafts an item until the bot carries a number of it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Each round the recipe is chosen afresh from what the bot carries, so sticks
-/// asked for with only logs at hand become planks first and sticks after,
-/// without a plan to follow or discard.
+/// Crafting is all this does. What goes into the item it asks for as items to
+/// carry, and where those come from -- a chest, another recipe, a tree -- is up
+/// to <see cref="ObtainItemsTask"/> and the sources behind it. The recipe is
+/// chosen afresh each round from what the bot carries, so a switch to another
+/// wood halfway through needs no plan to be thrown away.
 /// </para>
 /// <para>
 /// A recipe too big for the inventory's 2 by 2 grid needs a crafting table: one
-/// close by is used, one carried is placed, and failing both one is crafted.
-/// Raw materials are not gathered; lacking them, the task says what is missing.
+/// close by is used, otherwise one is carried and put down. The table is seen
+/// to before the ingredients, because making one uses up planks that would
+/// otherwise have to be fetched twice.
 /// </para>
 /// </remarks>
 public class CraftTask(
     Item item,
     int count,
+    ObtainChain chain,
     IInventoryManager inventory,
     ICraftingManager crafting,
     IWorldManager world,
     IPlayerManager player,
-    Func<Item, int, CraftTask> craft,
+    Func<ItemRequest, ObtainChain, ObtainItemsTask> obtain,
     Func<Vector3i, OpenContainerTask> open,
     Func<Item, Vector3i, PlaceBlockTask> place,
     ILogger<CraftTask> logger) : BotTask
@@ -45,7 +48,7 @@ public class CraftTask(
         [new(2, 0, 0), new(-2, 0, 0), new(0, 0, 2), new(0, 0, -2), new(2, 0, 2), new(-2, 0, -2), new(2, 0, -2), new(-2, 0, 2)];
 
     public override string Description
-        => $"carry {count} {item}";
+        => $"craft {item} until carrying {count}";
 
     public override bool IsSatisfied()
         => inventory.Count(item) >= count;
@@ -53,43 +56,36 @@ public class CraftTask(
     public override IEnumerable<BotTask> Dependencies()
     {
         // No recipe to follow: the action below says why.
-        if (CraftingPlanner.Choose(item, inventory.Count) is not { } recipe)
+        if (CraftingPlanner.Choose(item, inventory.Count, chain) is not { } recipe)
             yield break;
 
-        foreach (var (ingredient, needed) in CraftingPlanner.Needs(recipe))
-        {
-            var available = CraftingPlanner.Available(ingredient, inventory.Count);
-            if (available >= needed)
-                continue;
+        var making = chain.With([item]);
+        var atTable = NeedsTable(recipe) && crafting.ActiveGrid is not { Size: 3 };
+        var table = atTable ? FindTable() : null;
 
-            if (CraftingPlanner.ItemToCraft(ingredient, inventory.Count) is not { } part)
-                yield break;
+        if (atTable && table is null)
+            yield return obtain(ItemRequest.Of(Item.CraftingTable, 1), making);
 
-            yield return craft(part, inventory.Count(part) + needed - available);
-        }
+        // Enough for every craft still to go, so that the ingredients are
+        // fetched in one go rather than once per craft.
+        var crafts = (count - inventory.Count(item) + recipe.Result!.Count - 1) / recipe.Result.Count;
 
-        if (!NeedsTable(recipe) || crafting.ActiveGrid is { Size: 3 })
+        foreach (var (ingredient, perCraft) in CraftingPlanner.Needs(recipe))
+            yield return obtain(new ItemRequest(ingredient.Items, perCraft * Math.Max(crafts, 1)), making);
+
+        if (!atTable)
             yield break;
 
-        if (FindTable() is { } table)
-        {
+        if (table is not null)
             yield return open(table);
-            yield break;
-        }
-
-        if (inventory.Count(Item.CraftingTable) > 0 && FindSpotForTable() is { } spot)
-        {
+        else if (FindSpotForTable() is { } spot)
             yield return place(Item.CraftingTable, spot);
-            yield break;
-        }
-
-        yield return craft(Item.CraftingTable, 1);
     }
 
     public override async Task<TaskResult> ExecuteAsync(CancellationToken cancellationToken)
     {
-        if (CraftingPlanner.Choose(item, inventory.Count) is not { } recipe)
-            return TaskResult.Failed(CraftingPlanner.Explain(item, inventory.Count));
+        if (CraftingPlanner.Choose(item, inventory.Count, chain) is not { } recipe)
+            return TaskResult.Failed(CraftingPlanner.Explain(item));
 
         // A chest or furnace open on top has no grid to craft in.
         if (crafting.ActiveGrid is null)

@@ -5,8 +5,8 @@ using Vortex.Modules.Behaviour.Tasks;
 
 namespace Vortex.Bot.Commands.Items;
 
-[Command("craft", "Crafts an item, getting whatever goes into it")]
-public sealed class CraftCommand : TaskCommand
+[Command("get", "Gets items from wherever they can be had")]
+public sealed class GetCommand : TaskCommand
 {
     [Argument(0)]
     public Item Item { get; set; }
@@ -17,5 +17,6 @@ public sealed class CraftCommand : TaskCommand
     protected override BehaviourPolicy Policy => BehaviourPolicy.Gathering;
 
     protected override Task<BotTask?> CreateTaskAsync(CommandContext context)
-        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<CraftTask>(Item, context.Client.Inventory.Count(Item) + Count, ObtainChain.Empty));
+        => Task.FromResult<BotTask?>(context.Client.Brain.CreateTask<ObtainItemsTask>(
+            ItemRequest.Of(Item, context.Client.Inventory.Count(Item) + Count), ObtainChain.Empty));
 }
