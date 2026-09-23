@@ -1,5 +1,5 @@
-using Vortex.Data;
 using Microsoft.Extensions.Logging;
+using Vortex.Data;
 using Vortex.Modules.Navigation.Abstraction;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
@@ -100,6 +100,17 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// a good way round rather than tunnel through.
     /// </summary>
     private const double MineCost = 40.0;
+
+    /// <summary>
+    /// What a block of the way left is guessed at while digging is allowed.
+    /// </summary>
+    /// <remarks>
+    /// A guess, not a bound: it is above what walking costs, so a route that
+    /// could be walked may come out a little longer than the shortest one, and
+    /// well below what digging costs, so the search still prefers going round
+    /// where round is anywhere near as good.
+    /// </remarks>
+    private const double DigEstimate = MineCost * 0.6;
 
     /// <summary>Charged per block of gap, so the shortest jump that works wins.</summary>
     private const double JumpBlockCost = 2.0;
@@ -312,8 +323,16 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
         if (isGoal(origin))
             return new Route([], reachesGoal, Origin: origin);
 
+        // What a block of the way left is reckoned to cost. Walking, unless
+        // the search may dig: there a block is worth many times a walk, and an
+        // estimate that still prices it as a walk stops pointing anywhere. The
+        // search then spreads out through the rock in every direction and runs
+        // out of budget rather than arriving. Well under what breaking really
+        // costs, so that a way round is still worth looking at.
+        var perBlock = allowed.Dig ? DigEstimate : WalkCost;
+
         double Estimate(Vector3i from)
-            => Math.Max(0, Heuristic(from, towards, allowed.Diagonals) - slack * WalkCost);
+            => Math.Max(0, Heuristic(from, towards, allowed.Diagonals, perBlock) - slack * perBlock);
 
         // A node is a position together with the direction it was walked into
         // from, because what a turn costs depends on where the player came from.
@@ -427,8 +446,11 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
 
                 // Or go through it, if breaking blocks is allowed and there is
                 // floor on the other side to come out onto.
-                else if (!diagonal && allowed.Dig && Tunnel(side) is { } tunnel)
+                if (!diagonal && allowed.Dig && Tunnel(side) is { } tunnel)
                     yield return (tunnel.Move, tunnel.Cost * length, heading);
+
+                if (!diagonal && allowed.Dig && DigUp(from, side) is { } digUp)
+                    yield return (digUp.Move, digUp.Cost * length, heading);
 
                 continue;
             }
@@ -445,7 +467,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
         }
 
         // Straight down, by taking the floor out from under the player.
-        if (allowed.Dig && DigDown(from) is { } down)
+        if (allowed.Dig && DigStraightDown(from) is { } down)
             yield return (down.Move, down.Cost, NoDirection);
 
         if (!allowed.JumpGaps || !allowed.Diagonals)
@@ -495,7 +517,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// Breaking the floor to step down into where it was. One block at a time:
     /// what is under it has to hold the player up.
     /// </summary>
-    private (Move Move, double Cost)? DigDown(Vector3i from)
+    private (Move Move, double Cost)? DigStraightDown(Vector3i from)
     {
         var floor = Below(from);
 
@@ -503,6 +525,20 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             return null;
 
         return (new MineThrough(floor, [floor]), DropCost + MineCost);
+    }
+
+    private (Move Move, double Cost)? DigUp(Vector3i from, Vector3i side)
+    {
+        var floor = Below(from);
+
+        var toBreak = new List<Vector3i> { Above(side), Above(Above(side)), Above(Above(from)) }.Where(b => !IsPassable(b));
+
+        if (IsPassable(floor) || IsPassable(side) ||
+            toBreak.Any(b => !CanBreak(b)) ||
+            !IsSafeAt(Above(side)))
+            return null;
+
+        return (new MineThrough(Above(side), [.. toBreak]), MineCost * toBreak.Count() + StepUpCost);
     }
 
     /// <summary>
@@ -832,20 +868,20 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// being the cheapest route and becomes merely a route.
     /// </para>
     /// </remarks>
-    private static double Heuristic(Vector3i from, Vector3i to, bool diagonals)
+    private static double Heuristic(Vector3i from, Vector3i to, bool diagonals, double perBlock = WalkCost)
     {
         var dx = Math.Abs(from.X - to.X);
         var dz = Math.Abs(from.Z - to.Z);
 
         if (!diagonals)
-            return (dx + dz) * WalkCost;
+            return (dx + dz) * perBlock;
 
         // Every block of the shorter leg can be walked off as part of a
         // diagonal, at the cost of one corner-to-corner step rather than two
         // straight ones.
         var diagonal = Math.Min(dx, dz);
 
-        return (dx + dz - 2 * diagonal + diagonal * Math.Sqrt(2)) * WalkCost;
+        return (dx + dz - 2 * diagonal + diagonal * Math.Sqrt(2)) * perBlock;
     }
 
     /// <summary>

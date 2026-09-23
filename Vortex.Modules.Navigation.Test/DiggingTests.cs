@@ -14,9 +14,35 @@ public class DiggingTests
     private static readonly Vector3i _start = new(0, 64, 0);
 
     [Fact]
-    public void GoesThroughAWallWhenItMayDig()
+    public void GetsPastAWallWhenItMayDig()
     {
         var route = Find(Walled(), new(5, 64, 0), MovementCapabilities.Digging);
+
+        Assert.NotNull(route);
+        Assert.Contains(route.Moves, move => move is MineThrough);
+        Assert.Equal(new Vector3i(5, 64, 0), route.Moves[^1].To);
+    }
+
+    [Fact]
+    public void TakesTheTopOffAWallRatherThanBreakThroughIt()
+    {
+        // Two blocks high: one block out of the top is less work than two out
+        // of the middle, so it goes over rather than through.
+        var route = Find(Walled(), new(5, 64, 0), MovementCapabilities.Digging);
+
+        var through = Assert.Single(route!.Moves.OfType<MineThrough>());
+
+        Assert.Equal([new Vector3i(3, 65, 0)], through.Blocking);
+        Assert.Equal(new Vector3i(3, 65, 0), through.To);
+    }
+
+    [Fact]
+    public void BreaksThroughAWallItCannotGetOverInstead()
+    {
+        // The same wall, carried on above head height.
+        var world = Walled().WithWall(x: 3, y: 66, fromZ: -3, toZ: 3, height: 4);
+
+        var route = Find(world, new(5, 64, 0), MovementCapabilities.Digging);
 
         Assert.NotNull(route);
 
@@ -61,6 +87,47 @@ public class DiggingTests
 
         Assert.NotNull(route);
         Assert.Contains(route.Moves, move => move is MineThrough through && through.Blocking.Contains(new Vector3i(0, 63, 0)));
+    }
+
+    [Fact]
+    public void TunnelsALongWayThroughAMountain()
+    {
+        // Twenty blocks of rock in every direction. Priced as a walk, the
+        // estimate of what is left says nothing about where to look, and the
+        // search runs out of budget spreading through the rock instead.
+        var world = new FakeWorld();
+
+        for (var y = 50; y <= 80; y++)
+            world.WithFloor(y, -30, 30, -30, 30);
+
+        foreach (var y in new[] { 60, 61 })
+        {
+            world.With(new Vector3i(0, y, 0), Block.Air);
+            world.With(new Vector3i(20, y, 0), Block.Air);
+        }
+
+        var route = new AStarPathfinder(world, NullLogger<AStarPathfinder>.Instance)
+            .FindRoute(new Vector3i(0, 60, 0), new Vector3i(20, 60, 0), MovementCapabilities.Digging);
+
+        Assert.NotNull(route);
+        Assert.Equal(new Vector3i(20, 60, 0), route.Moves[^1].To);
+    }
+
+    [Fact]
+    public void StillWalksRoundAHillRatherThanThroughIt()
+    {
+        // Going round is a good deal longer here, and still the better deal.
+        var world = new FakeWorld().WithFloor(63, -60, 60, -60, 60);
+
+        for (var x = 10; x <= 14; x++)
+            for (var y = 64; y <= 67; y++)
+                world.WithFloor(y, x, x, -20, 20);
+
+        var route = new AStarPathfinder(world, NullLogger<AStarPathfinder>.Instance)
+            .FindRoute(new Vector3i(0, 64, 0), new Vector3i(40, 64, 10), MovementCapabilities.Digging);
+
+        Assert.NotNull(route);
+        Assert.DoesNotContain(route.Moves, move => move is MineThrough);
     }
 
     [Fact]
