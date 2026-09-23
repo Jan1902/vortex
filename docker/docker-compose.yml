@@ -18,8 +18,11 @@ services:
       MEMORY: "2G"
       ONLINE_MODE: "false"
       NETWORK_COMPRESSION_THRESHOLD: "${MC_COMPRESSION:-256}"
-      # Keep the world tiny and boring so startup is fast and tests are stable.
-      LEVEL_TYPE: "minecraft:flat"
+      # An ordinary overworld: trees, stone, ores and hills, which is what the
+      # bot has to cope with. Fixed seed so that a world regenerated later looks
+      # the same and tests keep their landmarks.
+      LEVEL_TYPE: "minecraft:normal"
+      SEED: "vortex"
       GENERATE_STRUCTURES: "false"
       SPAWN_MONSTERS: "false"
       SPAWN_ANIMALS: "false"
