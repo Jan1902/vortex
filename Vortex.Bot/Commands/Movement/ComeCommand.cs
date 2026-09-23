@@ -1,7 +1,6 @@
 using Vortex.Bot.Commands.Infrastructure;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Navigation;
-using Vortex.Shared;
 
 namespace Vortex.Bot.Commands.Movement;
 
@@ -11,6 +10,8 @@ namespace Vortex.Bot.Commands.Movement;
 [Command("come", "Walks over to you")]
 public sealed class ComeCommand : TaskCommand
 {
+    protected override bool MayDig => true;
+
     protected override async Task<BotTask?> CreateTaskAsync(CommandContext context)
     {
         if (context.SenderUuid is not { } sender)
