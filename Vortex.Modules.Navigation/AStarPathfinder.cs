@@ -531,14 +531,19 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     {
         var floor = Below(from);
 
-        var toBreak = new List<Vector3i> { Above(side), Above(Above(side)), Above(Above(from)) }.Where(b => !IsPassable(b));
-
-        if (IsPassable(floor) || IsPassable(side) ||
-            toBreak.Any(b => !CanBreak(b)) ||
-            !IsSafeAt(Above(side)))
+        // The cheap questions first: this runs for every way out of every
+        // position the search looks at.
+        if (IsPassable(floor) || IsPassable(side) || !IsSafeAt(Above(side)))
             return null;
 
-        return (new MineThrough(Above(side), [.. toBreak]), MineCost * toBreak.Count() + StepUpCost);
+        List<Vector3i> toBreak = [.. new[] { Above(side), Above(Above(side)), Above(Above(from)) }.Where(block => !IsPassable(block))];
+
+        // Nothing in the way after all: that is a plain step up, which is
+        // offered next to this one.
+        if (toBreak.Count == 0 || toBreak.Any(block => !CanBreak(block)))
+            return null;
+
+        return (new MineThrough(Above(side), toBreak), MineCost * toBreak.Count + StepUpCost);
     }
 
     /// <summary>
