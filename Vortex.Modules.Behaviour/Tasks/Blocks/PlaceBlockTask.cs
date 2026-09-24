@@ -98,6 +98,6 @@ public class PlaceBlockTask(Item item, Vector3i target) : BotTask
             && feet.Y + PlayerHeight > target.Y && feet.Y < target.Y + 1
             && feet.Z + PlayerWidth / 2 > target.Z && feet.Z - PlayerWidth / 2 < target.Z + 1;
 
-    private static bool IsReplaceable(Block block)
+    internal static bool IsReplaceable(Block block)
         => block is Block.Air or Block.CaveAir or Block.VoidAir || BlockTags.Replaceable.Contains(block);
 }

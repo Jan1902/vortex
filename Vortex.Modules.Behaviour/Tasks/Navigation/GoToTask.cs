@@ -15,7 +15,7 @@ public class GoToTask(Vector3i target) : BotTask
     public override Task<TaskResult> RunAsync(Bot bot)
         => Routes.WalkAsync(
             bot,
-            () => bot.Pathfinder.FindRoute(bot.Player.Position, target, Routes.Capabilities(bot)),
+            (from, previous) => bot.Pathfinder.FindRoute(from, target, Routes.Capabilities(bot), previous),
             () => IsDone(bot),
             $"get to {target.X} {target.Y} {target.Z}");
 }

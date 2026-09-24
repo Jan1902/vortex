@@ -69,8 +69,32 @@ public sealed record MineThrough(Vector3i To, IReadOnlyList<Vector3i> Blocking) 
 /// A step onto a block the player puts there itself, to cross something it
 /// could not otherwise.
 /// </summary>
+/// <remarks>
+/// Straight on only. The block goes against the side of the one the player is
+/// standing on, placed from its edge.
+/// </remarks>
 /// <param name="Support">Where the block has to go.</param>
 public sealed record Bridge(Vector3i To, Vector3i Support) : Move(To);
+
+/// <summary>
+/// Going straight up one block by jumping and placing a block underneath on
+/// the way.
+/// </summary>
+/// <remarks>
+/// The block goes where the player's feet were, on top of what it was standing
+/// on, so <c>To</c> is always the block above the one the move starts from.
+/// </remarks>
+public sealed record Pillar(Vector3i To) : Move(To);
+
+/// <summary>
+/// Swimming along the surface of water to the next block, or into the water
+/// from the bank.
+/// </summary>
+/// <remarks>
+/// Only at the surface, head above water. Diving is not planned, and neither
+/// is fighting a current.
+/// </remarks>
+public sealed record Swim(Vector3i To) : Move(To);
 
 /// <summary>
 /// A fall too long to survive, broken by placing water at the bottom and taking

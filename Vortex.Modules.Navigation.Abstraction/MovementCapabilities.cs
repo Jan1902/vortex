@@ -31,8 +31,19 @@ namespace Vortex.Modules.Navigation.Abstraction;
 /// where it comes down.
 /// </param>
 /// <param name="Dig">Whether blocks in the way may be broken to get through.</param>
-public record MovementCapabilities(bool JumpGaps = false, bool Diagonals = false, bool Sprint = false, bool Dig = false)
+/// <param name="Build">
+/// Whether blocks may be placed to get somewhere: to climb by standing on them
+/// or to walk across a gap on them. Only ever as many as
+/// <see cref="Loadout"/> says there are.
+/// </param>
+public record MovementCapabilities(bool JumpGaps = false, bool Diagonals = false, bool Sprint = false, bool Dig = false, bool Build = false)
 {
+    /// <summary>
+    /// What the player carries to dig and build with. Bare hands and no blocks
+    /// unless said otherwise.
+    /// </summary>
+    public Loadout Loadout { get; init; } = Loadout.Empty;
+
     /// <summary>Walking only: no gap it cannot step across, nothing touched.</summary>
     public static MovementCapabilities Walking { get; } = new();
 
@@ -41,4 +52,7 @@ public record MovementCapabilities(bool JumpGaps = false, bool Diagonals = false
 
     /// <summary>Athletic, and willing to break through what is in the way.</summary>
     public static MovementCapabilities Digging { get; } = Athletic with { Dig = true };
+
+    /// <summary>Digging, and willing to put blocks down to get across or up.</summary>
+    public static MovementCapabilities Building { get; } = Digging with { Build = true };
 }

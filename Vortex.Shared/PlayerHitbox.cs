@@ -30,17 +30,29 @@ public static class PlayerHitbox
     /// </remarks>
     public static IEnumerable<Vector2i> ColumnsUnder(Vector3d position)
     {
-        // A hair inside the far edge, so a player resting exactly on a boundary
-        // is not counted as being in the block it is only touching.
-        const double epsilon = 0.0001;
-
-        var minX = (int)Math.Floor(position.X - HalfWidth);
-        var maxX = (int)Math.Floor(position.X + HalfWidth - epsilon);
-        var minZ = (int)Math.Floor(position.Z - HalfWidth);
-        var maxZ = (int)Math.Floor(position.Z + HalfWidth - epsilon);
+        var (minX, maxX, minZ, maxZ) = ColumnBounds(position.X, position.Z);
 
         for (var x = minX; x <= maxX; x++)
             for (var z = minZ; z <= maxZ; z++)
                 yield return new Vector2i(x, z);
+    }
+
+    /// <summary>
+    /// The range of block columns the player's box covers, for code that asks
+    /// often enough that it cannot afford to be handed them one by one.
+    /// </summary>
+    /// <param name="x">Where the player's middle is along x.</param>
+    /// <param name="z">Where the player's middle is along z.</param>
+    public static (int MinX, int MaxX, int MinZ, int MaxZ) ColumnBounds(double x, double z)
+    {
+        // A hair inside the far edge, so a player resting exactly on a boundary
+        // is not counted as being in the block it is only touching.
+        const double epsilon = 0.0001;
+
+        return (
+            (int)Math.Floor(x - HalfWidth),
+            (int)Math.Floor(x + HalfWidth - epsilon),
+            (int)Math.Floor(z - HalfWidth),
+            (int)Math.Floor(z + HalfWidth - epsilon));
     }
 }

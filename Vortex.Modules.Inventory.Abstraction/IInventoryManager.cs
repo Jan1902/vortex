@@ -33,6 +33,11 @@ public interface IInventoryManager
     IReadOnlyList<(int Slot, ItemStack Stack)> Find(Func<ItemStack, bool> match);
 
     /// <summary>
+    /// The first empty slot in the main inventory, or <c>-1</c> if none is.
+    /// </summary>
+    int FirstEmptySlot();
+
+    /// <summary>
     /// How many more of an item the player can take in: into empty slots, and
     /// onto stacks of it that are not full.
     /// </summary>

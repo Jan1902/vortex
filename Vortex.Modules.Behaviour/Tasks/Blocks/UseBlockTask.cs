@@ -18,7 +18,8 @@ public class UseBlockTask(Vector3i target) : BotTask
         if (reached.IsFailure)
             return reached;
 
-        var face = await Aim.AtBlockAsync(bot.Player, target, bot.Cancellation);
+        if (await Aim.AtBlockAsync(bot, target) is not { } face)
+            return TaskResult.Failed($"cannot see the block at {target.X} {target.Y} {target.Z} to use it");
 
         return await bot.Interaction.UseItemOnBlockAsync(target, face, cancellationToken: bot.Cancellation)
             ? TaskResult.Success()

@@ -1,5 +1,5 @@
-using System.Collections.Immutable;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Collections.Immutable;
 using Vortex.Data;
 using Vortex.Modules.Crafting.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
@@ -87,6 +87,8 @@ public class CraftingTests
         public Task SwapWithHotbarAsync(int slot, int hotbarSlot) => Task.CompletedTask;
         public Task DropAsync(int slot, bool wholeStack = true) => Task.CompletedTask;
         public Task CloseContainerAsync() => Task.CompletedTask;
+
+        public int FirstEmptySlot() => 1;
     }
 
     private class NoNetworking : INetworkingManager

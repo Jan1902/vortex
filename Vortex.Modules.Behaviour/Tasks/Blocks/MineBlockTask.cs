@@ -33,7 +33,8 @@ public class MineBlockTask(Vector3i target) : BotTask
         if (Mining.BreakTicks(state.Block, tool, onGround: bot.Player.IsOnGround) is not { } ticks)
             return TaskResult.Failed($"{state.Block} cannot be broken");
 
-        var face = await Aim.AtBlockAsync(bot.Player, target, bot.Cancellation);
+        if (await Aim.AtBlockAsync(bot, target) is not { } face)
+            return TaskResult.Failed($"cannot see the block at {target.X} {target.Y} {target.Z} to break it");
 
         bot.Logger.LogDebug("Breaking {Block} with {Tool}, {Ticks} ticks", state.Block, tool?.ToString() ?? "the bare hand", ticks);
 

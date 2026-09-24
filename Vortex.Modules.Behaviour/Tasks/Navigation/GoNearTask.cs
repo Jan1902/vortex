@@ -27,7 +27,7 @@ public class GoNearTask(Vector3i target, int range = 1) : BotTask
     public override Task<TaskResult> RunAsync(Bot bot)
         => Routes.WalkAsync(
             bot,
-            () => bot.Pathfinder.FindRouteNear(bot.Player.Position, target, range, Routes.Capabilities(bot)),
+            (from, previous) => bot.Pathfinder.FindRouteNear(from, target, range, Routes.Capabilities(bot), previous),
             () => IsDone(bot),
             $"get near {target.X} {target.Y} {target.Z}");
 }

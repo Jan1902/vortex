@@ -1,153 +1,41 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
-using Vortex.Data;
 using Vortex.Modules.Navigation.Abstraction;
+using Vortex.Modules.Navigation.Movements;
 using Vortex.Modules.World.Abstraction;
 using Vortex.Shared;
 
 namespace Vortex.Modules.Navigation;
 
 /// <summary>
-/// A plain A* search over block positions.
+/// An A* search over block positions, with a time budget.
 /// </summary>
 /// <remarks>
 /// <para>
 /// A node is a block position the player's feet can occupy: two free blocks with
-/// something solid underneath. From there it walks to the blocks around it --
-/// corner to corner as well as along the axes, where that is allowed -- steps up
-/// one, drops down a few, or jumps a gap, which may land level, a block higher or
-/// a couple lower.
+/// something solid underneath. Where the player can go from there is up to the
+/// movements it is handed -- walking, stepping up, dropping, jumping, digging --
+/// each of which works out its own moves and what they cost. The search only
+/// asks all of them and keeps the cheapest way to each position.
 /// </para>
 /// <para>
 /// What it will actually plan is decided by the capabilities it is handed, not
 /// by what it can imagine. There are still no doors, no swimming, no ladders, no
-/// placing or breaking blocks to get through, and no notion of danger beyond
-/// what hurts to stand in. Each of those is its own piece of work.
+/// placing blocks to get across, and no notion of danger beyond what hurts to
+/// stand in. Each of those is a movement of its own still to be written.
+/// </para>
+/// <para>
+/// A search that runs out of time does not come back empty-handed if it can
+/// help it. It hands back the way to the most promising position it reached,
+/// the way Baritone does, so that the bot can start walking while the rest is
+/// worked out.
 /// </para>
 /// </remarks>
-internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> logger) : IPathfinder
+internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> logger, PathfinderOptions? options = null) : IPathfinder
 {
-    /// <summary>
-    /// How many nodes may be expanded before the search gives up. This is what
-    /// stops a search for an unreachable goal from walking the whole of the
-    /// loaded world.
-    /// </summary>
-    /// <remarks>
-    /// Counted in nodes rather than positions, and a position is as many nodes
-    /// as there are ways into it, because the direction it was reached from is
-    /// part of it. The budget is sized for that, so that neither the turn cost
-    /// nor the diagonals quietly shrank how far the search is willing to look
-    /// before reporting no way through.
-    /// </remarks>
-    private const int MaxExpandedNodes = 80_000;
-
-    /// <summary>
-    /// How far the player is willing to drop in one step.
-    /// </summary>
-    /// <remarks>
-    /// Three blocks is the most that costs no health. Going further needs
-    /// something to break the fall, which is a move of its own rather than a
-    /// bigger number here.
-    /// </remarks>
-    private const int MaxFallHeight = 3;
-
-    /// <summary>
-    /// What one block of walking costs, in ticks.
-    /// </summary>
-    /// <remarks>
-    /// Everything the search prices is measured in ticks, because as soon as it
-    /// can mine or bridge its way through, it has to answer "round or through",
-    /// and that is a question about time. Mixing a count of blocks with a
-    /// mining time in one number would have it tunnel through a mountain
-    /// because that came out three blocks shorter.
-    /// </remarks>
-    private const double WalkCost = 1 / 0.2158;
-
-    /// <summary>
-    /// What getting onto a block one higher costs, in ticks.
-    /// </summary>
-    /// <remarks>
-    /// Measured from the physics: walking into the block, jumping, and coming
-    /// down on top of it takes about eight ticks from the moment of take-off.
-    /// Nearly twice a plain walk, which is what makes the search prefer a flat
-    /// way round when there is one going spare.
-    /// </remarks>
-    private const double StepUpCost = 9.0;
-
-    /// <summary>What stepping off an edge costs before the fall itself.</summary>
-    private const double DropCost = 5.0;
-
-    /// <summary>
-    /// What a jump across a gap costs, in ticks: the arc itself, plus a little
-    /// for the run-up it has to be taken at.
-    /// </summary>
-    private const double JumpGapCost = 14.0;
-
-    /// <summary>
-    /// What a jump taken at a sprint costs.
-    /// </summary>
-    /// <remarks>
-    /// Dearer than the same jump walked, though it takes no longer. The extra is
-    /// not time, it is margin: the faster the take-off, the less say there is in
-    /// where the player comes down, so a route that sprints where it could have
-    /// walked is taking a risk for nothing.
-    /// </remarks>
-    private const double SprintJumpCost = 18.0;
-
-    /// <summary>
-    /// What breaking one block on the way costs, in ticks. A rough average
-    /// rather than a real mining time: how long it takes depends on the tool in
-    /// hand, which is not the search's business. High enough that the bot walks
-    /// a good way round rather than tunnel through.
-    /// </summary>
-    private const double MineCost = 40.0;
-
-    /// <summary>
-    /// What a block of the way left is guessed at while digging is allowed.
-    /// </summary>
-    /// <remarks>
-    /// A guess, not a bound: it is above what walking costs, so a route that
-    /// could be walked may come out a little longer than the shortest one, and
-    /// well below what digging costs, so the search still prefers going round
-    /// where round is anywhere near as good.
-    /// </remarks>
-    private const double DigEstimate = MineCost * 0.6;
-
-    /// <summary>Charged per block of gap, so the shortest jump that works wins.</summary>
-    private const double JumpBlockCost = 2.0;
-
-    /// <summary>
-    /// Charged per block of the fall beyond the first. Falling accelerates, so
-    /// each further block takes less time than the one before it; this is the
-    /// flat approximation of that.
-    /// </summary>
-    private const double FallCostPerBlock = 2.0;
-
-    /// <summary>
-    /// Charged for changing direction, which is what makes the search prefer a
-    /// few long legs to a staircase of the same length.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// With every direction costing exactly the same, a great many routes are
-    /// tied on price and the search is free to return any of them, including one
-    /// that zigzags across open ground. That costs nothing to walk, but it
-    /// cannot be covered in one movement, so the bot ends up stopping and
-    /// searching again at every single block.
-    /// </para>
-    /// <para>
-    /// Small enough that it only ever settles a tie: it would take a thousand
-    /// turns to outweigh one extra block, so no route is ever made longer in
-    /// order to make it straighter. Written as a fraction of the walk so that it
-    /// stays that way if the walk is ever re-measured.
-    /// </para>
-    /// </remarks>
-    private const double TurnCost = WalkCost / 1000;
-
     /// <summary>How high above its feet the player's eyes are, which is where reach is measured from.</summary>
     private const double EyeHeight = 1.62;
-
-    /// <summary>The direction of a node nothing has been walked into yet.</summary>
-    private const int NoDirection = -1;
 
     /// <summary>
     /// How far above and below the player to look when picking somewhere to
@@ -156,94 +44,143 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     private const int HeightSearchRange = 4;
 
     /// <summary>
-    /// The ways out of a block. The four along the axes come first, so that a
-    /// search without diagonals can simply take the front of the list.
+    /// How far, in blocks, a route cut short has to get the player before it
+    /// is worth walking at all.
     /// </summary>
-    private static readonly Vector3i[] _directions =
-    [
-        new(1, 0, 0),
-        new(-1, 0, 0),
-        new(0, 0, 1),
-        new(0, 0, -1),
-
-        new(1, 0, 1),
-        new(1, 0, -1),
-        new(-1, 0, 1),
-        new(-1, 0, -1),
-    ];
-
-    /// <summary>How many of <see cref="_directions"/> run along an axis.</summary>
-    private const int StraightDirections = 4;
+    /// <remarks>
+    /// Less than this and the next search starts from nearly the same place and
+    /// most likely stops at nearly the same place, which is standing still with
+    /// extra steps.
+    /// </remarks>
+    private const double MinimumProgress = 5;
 
     /// <summary>
-    /// Where a jump can land that is neither along an axis nor straight across
-    /// a corner, such as two blocks on and one to the side: every such offset
-    /// within the furthest reach there is.
+    /// How many positions are looked at between checks of the clock. Reading
+    /// it is not free, and neither is a search that overruns by a few
+    /// hundred positions.
+    /// </summary>
+    private const int ClockInterval = 256;
+
+    /// <summary>
+    /// How much the way already walked counts against the estimate of what is
+    /// left, when picking where a route that is cut short should end.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Headings for these carry on after <see cref="_directions"/>, so that
-    /// turning into or out of one costs a turn like any other change of way.
+    /// Weighing the two alike picks the position that looks best by the
+    /// search's own measure, which early on is one barely away from the start.
+    /// Counting what is behind for less leans towards whatever has got furthest
+    /// towards the goal, and the more it is discounted, the further out -- and
+    /// the less sure -- the pick gets.
     /// </para>
     /// <para>
-    /// Each comes with the neighbour its line leaves the block through -- always
-    /// one along an axis, since the line never runs through a corner. A jump
-    /// only makes sense where that neighbour is a gap; where it is floor, the
-    /// player can walk on and jump from there. Ruling a jump out by that one
-    /// block, which the search looks at anyway, is what keeps these from costing
-    /// anything on ground where there is nothing to jump over.
+    /// So there are several, tried from the most careful up, and the first
+    /// whose pick is far enough away to be worth walking is the one taken. These
+    /// are the numbers Baritone uses.
     /// </para>
     /// </remarks>
-    private static readonly (Vector3i Offset, int Exit)[] _offAxisJumps = OffAxisJumpOffsets().ToArray();
+    private static readonly double[] _partialWeights = [1.5, 2, 2.5, 3, 4, 5, 10];
 
-    public Route? FindRoute(Vector3d start, Vector3i goal, MovementCapabilities? capabilities = null)
-        => Search(StandingBlockFor(start), goal, capabilities);
+    /// <summary>
+    /// Everything the player can do to get from one block to the next. Adding a
+    /// new kind of move is adding it here.
+    /// </summary>
+    private static readonly IMovement[] _movements =
+    [
+        new Walking(),
+        new SteppingUp(),
+        new Dropping(),
+        new JumpingAcross(),
+        new JumpingOffAxis(),
+        new Tunnelling(),
+        new DiggingUp(),
+        new DiggingDown(),
+        new Swimming(),
+        new Pillaring(),
+        new Bridging(),
+    ];
 
-    public Route? FindRoute(Vector3i start, Vector3i goal, MovementCapabilities? capabilities = null)
-        => Search(CanStandAt(start) ? start : StandingPositionFor(start), goal, capabilities);
+    private readonly PathfinderOptions _options = options ?? PathfinderOptions.Default;
 
-    public Route? FindRouteWithinReach(Vector3d start, Vector3i target, double reach, MovementCapabilities? capabilities = null)
+    public Route? FindRoute(Vector3d start, Vector3i goal, MovementCapabilities? capabilities = null, Route? previous = null)
     {
-        var origin = StandingBlockFor(start);
+        var context = NewContext(capabilities);
+
+        return Search(context, StandingBlockFor(context, start), goal, previous);
+    }
+
+    public Route? FindRoute(Vector3i start, Vector3i goal, MovementCapabilities? capabilities = null, Route? previous = null)
+    {
+        var context = NewContext(capabilities);
+
+        return Search(context, context.CanStandAt(start) ? start : StandingPositionFor(context, start), goal, previous);
+    }
+
+    public Route? FindRouteWithinReach(Vector3d start, Vector3i target, double reach, MovementCapabilities? capabilities = null, Route? previous = null)
+    {
+        var context = NewContext(capabilities);
+        var origin = StandingBlockFor(context, start);
+        Cell block = target;
 
         // Not loaded yet: head that way as for any other unknown goal, and look
         // for somewhere to stand once it is known.
         if (world.GetBlock(target) is null)
-            return Search(origin, target, capabilities);
+            return Search(context, origin, target, previous);
 
         return Explore(
+            context,
             origin,
-            position => IsWithinReach(position, target, reach)
-                && position != target
-                && Above(position) != target,
-            target,
-            reach,
-            capabilities ?? MovementCapabilities.Walking,
+            position => IsWithinReach(position, block, reach)
+                && position != block
+                && position.Above != block
+                && context.CanSee(position, block),
+            new Target(block, reach, (int)Math.Ceiling(reach + EyeHeight), Math.Max(0, (int)Math.Floor(reach + 0.5 - EyeHeight))),
             reachesGoal: true,
-            label: target);
+            label: target,
+            previous);
     }
 
-    public Route? FindRouteNear(Vector3d start, Vector3i target, int range, MovementCapabilities? capabilities = null)
+    public Route? FindRouteNear(Vector3d start, Vector3i target, int range, MovementCapabilities? capabilities = null, Route? previous = null)
     {
-        var origin = StandingBlockFor(start);
+        var context = NewContext(capabilities);
+        var origin = StandingBlockFor(context, start);
+        Cell block = target;
 
         if (world.GetBlock(target) is null)
-            return Search(origin, target, capabilities);
+            return Search(context, origin, target, previous);
 
         return Explore(
+            context,
             origin,
-            position => IsNear(position, target, range),
-            target,
+            position => IsNear(position, block, range),
             // The corner of the square is the furthest off the target an
             // arrival can be, and the estimate must not count that as still to go.
-            range * Math.Sqrt(2),
-            capabilities ?? MovementCapabilities.Walking,
+            new Target(block, range * Math.Sqrt(2), 1, 1),
             reachesGoal: true,
-            label: target);
+            label: target,
+            previous);
+    }
+
+    public bool CanStillMake(Vector3i from, Move move, MovementCapabilities? capabilities = null)
+    {
+        var context = NewContext(capabilities);
+        var steps = new List<Step>();
+
+        foreach (var movement in _movements)
+            movement.Expand(context, from, steps);
+
+        foreach (var step in steps)
+            if (step.Matches(move))
+                return true;
+
+        return false;
     }
 
     /// <summary>Whether a position is at most some blocks off a target sideways, and at most one up or down.</summary>
     public static bool IsNear(Vector3i position, Vector3i target, int range)
+        => IsNear((Cell)position, target, range);
+
+    private static bool IsNear(Cell position, Cell target, int range)
         => Math.Abs(position.X - target.X) <= range
         && Math.Abs(position.Z - target.Z) <= range
         && Math.Abs(position.Y - target.Y) <= 1;
@@ -252,7 +189,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// Whether a block is within reach of a player standing at a position,
     /// measured from the eyes of one standing in the middle of it.
     /// </summary>
-    private static bool IsWithinReach(Vector3i standing, Vector3i target, double reach)
+    private static bool IsWithinReach(Cell standing, Cell target, double reach)
     {
         var dx = standing.X - target.X;
         var dy = standing.Y + EyeHeight - (target.Y + 0.5);
@@ -261,12 +198,17 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
         return dx * dx + dy * dy + dz * dz <= reach * reach;
     }
 
-    private Route? Search(Vector3i origin, Vector3i goal, MovementCapabilities? capabilities)
-    {
-        var allowed = capabilities ?? MovementCapabilities.Walking;
+    /// <summary>
+    /// A fresh view of the world for one search. Fresh every time, so that it
+    /// sees whatever has changed since the last one.
+    /// </summary>
+    private SearchContext NewContext(MovementCapabilities? capabilities)
+        => new(new BlockCache(world), capabilities ?? MovementCapabilities.Walking);
 
+    private Route? Search(SearchContext context, Cell origin, Vector3i goal, Route? previous)
+    {
         if (origin == goal)
-            return new Route([], ReachesGoal: true, Origin: origin);
+            return new Route([], ReachesGoal: true, Origin: origin.ToVector3i());
 
         // A goal the client has not been sent yet is not unreachable, it is
         // unknown: chunks arrive as the player approaches, so refusing to move
@@ -274,11 +216,11 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
         // Head for the furthest known ground along the way instead and ask
         // again from there.
         var reachesGoal = true;
-        var destination = goal;
+        Cell destination = goal;
 
         if (world.GetBlock(goal) is null)
         {
-            if (NearestKnownTowards(origin, goal) is not { } staging)
+            if (NearestKnownTowards(context, origin, goal) is not { } staging)
             {
                 logger.LogDebug("No path towards {Goal}: nothing known in that direction", goal);
 
@@ -291,580 +233,217 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             reachesGoal = false;
         }
 
-        if (!CanStandAt(destination))
+        if (!context.CanBeAt(destination))
         {
             logger.LogDebug("No path to {Goal}: nothing to stand on there", destination);
 
             return null;
         }
 
-        return Explore(origin, position => position == destination, destination, 0, allowed, reachesGoal, goal);
+        return Explore(context, origin, position => position == destination, new Target(destination, 0, 0, 0), reachesGoal, goal, previous);
     }
 
     /// <summary>
     /// The A* search itself, towards whatever counts as arriving.
     /// </summary>
     /// <param name="isGoal">Whether standing at a position is arriving.</param>
-    /// <param name="towards">Where arriving happens, for the estimate of what is left.</param>
-    /// <param name="slack">
-    /// How far short of <paramref name="towards"/> arriving can already be, so
-    /// that the estimate stays below the real cost.
-    /// </param>
+    /// <param name="target">Where arriving happens, for the estimate of what is left.</param>
     /// <param name="label">What the search is for, in the log.</param>
+    /// <param name="previous">The route being replaced, whose positions come cheaper.</param>
     private Route? Explore(
-        Vector3i origin,
-        Func<Vector3i, bool> isGoal,
-        Vector3i towards,
-        double slack,
-        MovementCapabilities allowed,
+        SearchContext context,
+        Cell origin,
+        Func<Cell, bool> isGoal,
+        Target target,
         bool reachesGoal,
-        Vector3i label)
+        Vector3i label,
+        Route? previous)
     {
         if (isGoal(origin))
-            return new Route([], reachesGoal, Origin: origin);
+            return new Route([], reachesGoal, Origin: origin.ToVector3i());
 
-        // What a block of the way left is reckoned to cost. Walking, unless
-        // the search may dig: there a block is worth many times a walk, and an
-        // estimate that still prices it as a walk stops pointing anywhere. The
-        // search then spreads out through the rock in every direction and runs
-        // out of budget rather than arriving. Well under what breaking really
-        // costs, so that a way round is still worth looking at.
-        var perBlock = allowed.Dig ? DigEstimate : WalkCost;
+        var clock = Stopwatch.StartNew();
+        var allowed = context.Allowed;
 
-        double Estimate(Vector3i from)
-            => Math.Max(0, Heuristic(from, towards, allowed.Diagonals, perBlock) - slack * perBlock);
+        // What a block of the way left is reckoned to cost: a walk, even where
+        // the search may dig. Guessing higher points the search straight at the
+        // goal, but then it tunnels through walls it could have walked round
+        // for less, because the way round never looked worth trying. Priced as
+        // a walk, it finds the cheaper of the two; where that means looking
+        // through a lot of rock, the time budget and a route cut short are
+        // what keep it from looking for ever.
+        // What a block of height still to lose is reckoned to cost. Where the
+        // search may dig, the way down may well be through rock, and pricing
+        // that as a fall has the search look at every place on the surface
+        // above before it tries going down at all.
+        var perBlockDown = allowed.Dig ? Costs.DigDownEstimate : Costs.Descend;
 
-        // A node is a position together with the direction it was walked into
-        // from, because what a turn costs depends on where the player came from.
-        // The same position can therefore be reached as several nodes.
-        var searchFrom = new Node(origin, NoDirection);
+        double Estimate(Cell from)
+            => Heuristic(from, target, allowed.Diagonals, perBlockDown);
 
-        var open = new PriorityQueue<Node, double>();
+        var favoured = Favoured(previous);
 
-        // Each node remembers the node it came from and the move that got it
-        // there, which is what the finished route is made of.
-        var cameFrom = new Dictionary<Node, (Node From, Move Move)>();
-        var costSoFar = new Dictionary<Node, double> { [searchFrom] = 0 };
-        var settled = new HashSet<Node>();
+        // A node is a position and nothing else. What a turn costs depends on
+        // which way the player was going, but only ever settles a tie, and
+        // making the direction part of the node to price it exactly would
+        // multiply every position by every way into it.
+        var nodes = new List<Node>();
+        var index = new Dictionary<Cell, int>();
+        var open = new PriorityQueue<int, Priority>(Priority.Comparer);
 
-        open.Enqueue(searchFrom, Estimate(origin));
+        nodes.Add(new Node(origin, Cost: 0, Estimate(origin), Parent: -1, Headings.None, Arrival: default, Placed: 0));
+        index[origin] = 0;
+        open.Enqueue(0, new Priority(nodes[0].Estimate, nodes[0].Estimate));
 
+        var partial = new PartialRoutes(origin);
+        var steps = new List<Step>(64);
         var expanded = 0;
 
         while (open.TryDequeue(out var current, out _))
         {
-            if (isGoal(current.Position))
-                return Reconstruct(cameFrom, searchFrom, current, reachesGoal, origin);
+            ref var node = ref CollectionsMarshal.AsSpan(nodes)[current];
 
             // The queue has no decrease-key, so a node can sit in it more than
             // once. The first time it comes out carries its best cost, and any
             // later copy is stale.
-            if (!settled.Add(current))
+            if (node.Closed)
                 continue;
 
-            if (++expanded > MaxExpandedNodes)
-            {
-                logger.LogDebug("Gave up looking for a path to {Goal} after {Expanded} positions", label, expanded);
+            if (isGoal(node.Position))
+                return Reconstruct(nodes, current, reachesGoal, origin, truncated: false);
 
-                return null;
+            node.Closed = true;
+            partial.Consider(current, node);
+
+            var position = node.Position;
+            var costSoFar = node.Cost;
+            var arrivedHeading = node.Heading;
+            var placedSoFar = node.Placed;
+
+            expanded++;
+
+            if ((expanded % ClockInterval == 0 || expanded >= _options.MaxExpandedPositions)
+                && IsOutOfTime(clock.Elapsed, expanded, partial, nodes, out var best))
+            {
+                if (best is not { } furthest)
+                {
+                    logger.LogDebug("Gave up looking for a path to {Goal} after {Expanded} positions", label, expanded);
+
+                    return null;
+                }
+
+                logger.LogDebug(
+                    "Out of time looking for a path to {Goal} after {Expanded} positions; taking the way to {Partial} for now",
+                    label,
+                    expanded,
+                    nodes[furthest].Position);
+
+                return Reconstruct(nodes, furthest, reachesGoal, origin, truncated: true);
             }
 
-            foreach (var (move, stepCost, heading) in Steps(current.Position, allowed))
+            steps.Clear();
+
+            foreach (var movement in _movements)
+                movement.Expand(context, position, steps);
+
+            foreach (var step in steps)
             {
-                var next = new Node(move.To, heading);
+                // Blocks are counted along the way that got here, not per
+                // position: two ways to the same place can have used up
+                // different numbers of them, and only the cheaper is kept.
+                var placed = placedSoFar + step.Places;
 
-                if (settled.Contains(next))
+                if (placed > allowed.Loadout.Blocks)
                     continue;
 
-                var turning = current.Direction != NoDirection && current.Direction != heading;
-                var cost = costSoFar[current] + stepCost + (turning ? TurnCost : 0);
+                var stepCost = favoured is not null && favoured.Contains(step.To)
+                    ? step.Cost * Costs.FavourPrevious
+                    : step.Cost;
 
-                if (costSoFar.TryGetValue(next, out var best) && cost >= best)
+                var turning = arrivedHeading != Headings.None && arrivedHeading != step.Heading;
+                var cost = costSoFar + stepCost + (turning ? Costs.Turn : 0);
+
+                if (index.TryGetValue(step.To, out var existing))
+                {
+                    ref var known = ref CollectionsMarshal.AsSpan(nodes)[existing];
+
+                    if (known.Closed || cost >= known.Cost)
+                        continue;
+
+                    known.Cost = cost;
+                    known.Parent = current;
+                    known.Heading = step.Heading;
+                    known.Arrival = step;
+                    known.Placed = placed;
+
+                    open.Enqueue(existing, new Priority(cost + known.Estimate, known.Estimate));
+
                     continue;
+                }
 
-                costSoFar[next] = cost;
-                cameFrom[next] = (current, move);
+                var estimate = Estimate(step.To);
 
-                open.Enqueue(next, cost + Estimate(move.To));
+                index[step.To] = nodes.Count;
+                nodes.Add(new Node(step.To, cost, estimate, current, step.Heading, step, placed));
+                open.Enqueue(nodes.Count - 1, new Priority(cost + estimate, estimate));
             }
         }
 
-        logger.LogDebug("No path from {Start} to {Goal}", origin, label);
+        logger.LogDebug("No path from {Start} to {Goal} after {Expanded} positions", origin, label, expanded);
 
         return null;
     }
 
     /// <summary>
-    /// The moves available from one place, what each of them costs, and which
-    /// way it went.
+    /// Whether the search has had its time.
     /// </summary>
-    /// <remarks>
-    /// The move and its cost are produced together on purpose: what the search
-    /// decided and what it paid for that decision are the same fact, and the
-    /// route carries the move along so that nothing downstream has to work out
-    /// from the geometry what was meant.
-    /// </remarks>
-    private IEnumerable<(Move Move, double Cost, int Heading)> Steps(Vector3i from, MovementCapabilities allowed)
+    /// <param name="best">Where the part of the way it ends with goes to, or null for nothing.</param>
+    private bool IsOutOfTime(TimeSpan elapsed, int expanded, PartialRoutes partial, List<Node> nodes, out int? best)
     {
-        var headings = allowed.Diagonals ? _directions.Length : StraightDirections;
+        best = null;
 
-        // Which of the neighbours along the axes are gaps, one bit per heading.
-        var gaps = 0;
-
-        for (var heading = 0; heading < headings; heading++)
+        if (elapsed >= _options.TimeLimit || expanded >= _options.MaxExpandedPositions)
         {
-            var direction = _directions[heading];
-            var diagonal = heading >= StraightDirections;
+            best = partial.Best(nodes);
 
-            // A corner cannot be squeezed through. The player is wider than a
-            // point, so going round one means both blocks beside it have to be
-            // out of the way, or it scrapes through geometry the server will not
-            // let it through.
-            if (diagonal && !CornerIsClear(from, direction))
-                continue;
-
-            var length = Length(direction);
-            var side = Offset(from, direction);
-
-            if (CanStandAt(side))
-            {
-                yield return (new Walk(side), WalkCost * length, heading);
-
-                continue;
-            }
-
-            if (IsBlocked(side))
-            {
-                // Something is in the way at body height. Stepping onto it works
-                // if its top is clear and there is room to jump from here.
-                // Straight on only: a step up taken across a corner catches the
-                // edge as often as it clears it.
-                var up = Above(side);
-
-                if (!diagonal && CanStandAt(up) && IsPassable(Above(Above(from))))
-                    yield return (new StepUp(up), StepUpCost, heading);
-
-                // Or go through it, if breaking blocks is allowed and there is
-                // floor on the other side to come out onto.
-                if (!diagonal && allowed.Dig && Tunnel(side) is { } tunnel)
-                    yield return (tunnel.Move, tunnel.Cost * length, heading);
-
-                if (!diagonal && allowed.Dig && DigUp(from, side) is { } digUp)
-                    yield return (digUp.Move, digUp.Cost * length, heading);
-
-                continue;
-            }
-
-            gaps |= 1 << heading;
-
-            // The way is open but there is no floor: fall until something
-            // catches the player, and give up if that is too far down.
-            foreach (var drop in DropsFrom(side))
-                yield return (drop.Move, drop.Cost * length, heading);
-
-            if (allowed.JumpGaps && JumpAcross(from, direction, allowed.Sprint) is { } leap)
-                yield return (leap.Move, leap.Cost, heading);
+            return true;
         }
 
-        // Straight down, by taking the floor out from under the player.
-        if (allowed.Dig && DigStraightDown(from) is { } down)
-            yield return (down.Move, down.Cost, NoDirection);
-
-        if (!allowed.JumpGaps || !allowed.Diagonals)
-            yield break;
-
-        for (var i = 0; i < _offAxisJumps.Length; i++)
+        // Past its patience a search settles for part of the way, if there is
+        // a part worth having. Until then it keeps looking for all of it.
+        if (elapsed >= _options.Patience && partial.Best(nodes) is { } found)
         {
-            var (offset, exit) = _offAxisJumps[i];
+            best = found;
 
-            if ((gaps & (1 << exit)) == 0)
-                continue;
-
-            if (JumpOffAxis(from, offset, allowed.Sprint) is { } leap)
-                yield return (leap.Move, leap.Cost, _directions.Length + i);
+            return true;
         }
+
+        return false;
     }
 
-    /// <summary>
-    /// Breaking through what stands in the way at body height, to walk into
-    /// where it was.
-    /// </summary>
-    private (Move Move, double Cost)? Tunnel(Vector3i side)
+    /// <summary>The positions of the route being replaced, if there is one.</summary>
+    private static HashSet<Cell>? Favoured(Route? previous)
     {
-        // Something has to hold the player up over there.
-        if (IsPassable(Below(side)))
+        if (previous is null || previous.Moves.Count == 0)
             return null;
 
-        var blocking = new List<Vector3i>();
+        var favoured = new HashSet<Cell>(previous.Moves.Count);
 
-        foreach (var position in new[] { Above(side), side })
-        {
-            if (IsPassable(position))
-                continue;
+        foreach (var move in previous.Moves)
+            favoured.Add(move.To);
 
-            if (!CanBreak(position))
-                return null;
-
-            blocking.Add(position);
-        }
-
-        return blocking.Count == 0
-            ? null
-            : (new MineThrough(side, blocking), WalkCost + blocking.Count * MineCost);
+        return favoured;
     }
-
-    /// <summary>
-    /// Breaking the floor to step down into where it was. One block at a time:
-    /// what is under it has to hold the player up.
-    /// </summary>
-    private (Move Move, double Cost)? DigStraightDown(Vector3i from)
-    {
-        var floor = Below(from);
-
-        if (IsPassable(floor) || IsPassable(Below(floor)) || !CanBreak(floor) || !IsSafeAt(floor))
-            return null;
-
-        return (new MineThrough(floor, [floor]), DropCost + MineCost);
-    }
-
-    private (Move Move, double Cost)? DigUp(Vector3i from, Vector3i side)
-    {
-        var floor = Below(from);
-
-        // The cheap questions first: this runs for every way out of every
-        // position the search looks at.
-        if (IsPassable(floor) || IsPassable(side) || !IsSafeAt(Above(side)))
-            return null;
-
-        List<Vector3i> toBreak = [.. new[] { Above(side), Above(Above(side)), Above(Above(from)) }.Where(block => !IsPassable(block))];
-
-        // Nothing in the way after all: that is a plain step up, which is
-        // offered next to this one.
-        if (toBreak.Count == 0 || toBreak.Any(block => !CanBreak(block)))
-            return null;
-
-        return (new MineThrough(Above(side), toBreak), MineCost * toBreak.Count + StepUpCost);
-    }
-
-    /// <summary>
-    /// Whether a block may be broken to get through.
-    /// </summary>
-    /// <remarks>
-    /// Bedrock and the like cannot be broken at all. Next to a liquid is a bad
-    /// idea, because what comes through the hole does not stop, and so is
-    /// underneath sand or gravel, which falls into the hole and fills it again.
-    /// </remarks>
-    private bool CanBreak(Vector3i position)
-    {
-        if (world.GetBlock(position) is not { } state || state.Block.Hardness() < 0)
-            return false;
-
-        if (BlockHazard.IsHarmful(state) || BlockHazard.Drowns(state))
-            return false;
-
-        foreach (var side in new[] { Above(position), Below(position), Offset(position, new Vector3i(1, 0, 0)), Offset(position, new Vector3i(-1, 0, 0)), Offset(position, new Vector3i(0, 0, 1)), Offset(position, new Vector3i(0, 0, -1)) })
-            if (world.GetBlock(side) is { } neighbour && (BlockHazard.Drowns(neighbour) || BlockHazard.IsHarmful(neighbour)))
-                return false;
-
-        return world.GetBlock(Above(position))?.Block is not (Block.Sand or Block.RedSand or Block.Gravel);
-    }
-
-    private static IEnumerable<(Vector3i Offset, int Exit)> OffAxisJumpOffsets()
-    {
-        var reach = (int)Math.Floor(JumpReach.Furthest(sprinting: true, JumpReach.LowestLanding));
-
-        for (var dx = -reach; dx <= reach; dx++)
-            for (var dz = -reach; dz <= reach; dz++)
-            {
-                if (dx == 0 || dz == 0 || Math.Abs(dx) == Math.Abs(dz) || dx * dx + dz * dz > reach * reach)
-                    continue;
-
-                // Out through the side the line meets first: the one across the
-                // axis it covers more of.
-                var exit = Math.Abs(dx) > Math.Abs(dz)
-                    ? new Vector3i(Math.Sign(dx), 0, 0)
-                    : new Vector3i(0, 0, Math.Sign(dz));
-
-                yield return (new Vector3i(dx, 0, dz), Array.IndexOf(_directions, exit));
-            }
-    }
-
-    /// <summary>
-    /// A jump to a block that lies off every one of the eight directions, such
-    /// as two on and one to the side, or null if it cannot be made.
-    /// </summary>
-    /// <remarks>
-    /// Judged the way the player flies it: in a straight line from the middle
-    /// of the block to the middle of the landing, so everything the player's
-    /// box sweeps over on that line has to be clear, and the reach is the
-    /// distance between the two middles. As with the other jumps, the highest
-    /// landing wins and walking is preferred to sprinting wherever both reach.
-    /// </remarks>
-    private (Move Move, double Cost)? JumpOffAxis(Vector3i from, Vector3i offset, bool maySprint)
-    {
-        if (!IsPassable(Above(Above(from))))
-            return null;
-
-        var distance = Math.Sqrt(offset.X * offset.X + offset.Z * offset.Z);
-        var gap = Math.Max(Math.Abs(offset.X), Math.Abs(offset.Z)) - 1;
-
-        for (var rise = JumpReach.HighestLanding; rise >= JumpReach.LowestLanding; rise--)
-        {
-            var sprinting = distance > JumpReach.Furthest(sprinting: false, rise);
-
-            if (sprinting && (!maySprint || distance > JumpReach.Furthest(sprinting: true, rise)))
-                continue;
-
-            var landing = new Vector3i(from.X + offset.X, from.Y + rise, from.Z + offset.Z);
-
-            if (!CanStandAt(landing) || !CanFlyTo(from, landing))
-                continue;
-
-            return sprinting
-                ? (new JumpGap(landing, gap, Sprinting: true), SprintJumpCost + gap * JumpBlockCost)
-                : (new JumpGap(landing, gap), JumpGapCost + gap * JumpBlockCost);
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Whether the straight flight from one block to a landing off to the side
-    /// actually crosses a gap, and is clear all the way.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The gap comes first, because it is cheap to ask and on open ground the
-    /// answer is always no: where every block under the line could be walked
-    /// on, there is nothing to jump over and walking gets there anyway.
-    /// </para>
-    /// <para>
-    /// Then every column the player's box passes over has to be clear at body
-    /// height and the block above, as for any jump.
-    /// </para>
-    /// </remarks>
-    private bool CanFlyTo(Vector3i from, Vector3i landing)
-    {
-        const int samples = 20;
-
-        var start = new Vector3d(from.X + 0.5, from.Y, from.Z + 0.5);
-        var end = new Vector3d(landing.X + 0.5, from.Y, landing.Z + 0.5);
-        var landingColumn = new Vector2i(landing.X, landing.Z);
-
-        Vector3d Along(int sample)
-            => start + (end - start) * ((double)sample / samples);
-
-        var underLine = Enumerable.Range(1, samples - 1)
-            .Select(sample => Along(sample).ToBlockPosition())
-            .Where(block => block != from && new Vector2i(block.X, block.Z) != landingColumn)
-            .Distinct();
-
-        if (underLine.All(CanStandAt))
-            return false;
-
-        var passedOver = new HashSet<Vector2i>();
-
-        for (var sample = 0; sample <= samples; sample++)
-        {
-            foreach (var column in PlayerHitbox.ColumnsUnder(Along(sample)))
-            {
-                if (!passedOver.Add(column))
-                    continue;
-
-                var over = new Vector3i(column.X, from.Y, column.Z);
-
-                if (over == from)
-                    continue;
-
-                // Jumping up onto a landing, its column at take-off height is
-                // the very block landed on.
-                if (column == landingColumn && landing.Y > from.Y)
-                    continue;
-
-                if (IsBlocked(over) || !IsPassable(Above(Above(over))))
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Stepping off an edge, where the floor next door is missing but something
-    /// below it is not.
-    /// </summary>
-    /// <remarks>
-    /// Any floor will do, a single block with nothing beyond it included: the
-    /// movement lets go before the edge and brakes in the air, so it comes down
-    /// on the block it was aimed at rather than one further on.
-    /// </remarks>
-    /// <returns>At most one drop: the first floor the player would meet.</returns>
-    private IEnumerable<(Move Move, double Cost)> DropsFrom(Vector3i side)
-    {
-        for (var drop = 1; drop <= MaxFallHeight; drop++)
-        {
-            var landing = new Vector3i(side.X, side.Y - drop, side.Z);
-
-            if (CanStandAt(landing))
-            {
-                yield return (new Drop(landing, drop), DropCost + drop * FallCostPerBlock);
-                yield break;
-            }
-
-            if (!IsPassable(landing))
-                yield break;
-        }
-    }
-
-    /// <summary>
-    /// Whether a diagonal step has room to go round the corner.
-    /// </summary>
-    /// <remarks>
-    /// Both of the blocks either side of the corner have to be clear at body
-    /// height. Standing on them is not required -- cutting across the corner of
-    /// a hole is exactly what a diagonal is for -- but squeezing between two
-    /// walls is not.
-    /// </remarks>
-    private bool CornerIsClear(Vector3i at, Vector3i direction)
-        => !IsBlocked(Offset(at, new Vector3i(direction.X, 0, 0)))
-        && !IsBlocked(Offset(at, new Vector3i(0, 0, direction.Z)));
-
-    /// <summary>
-    /// The cheapest jump over a gap in this direction, or null if there is
-    /// nothing worth jumping to.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The landing does not have to be level. Jumping up onto a ledge across a
-    /// gap and coming down onto one below are the same movement with the same
-    /// timing; what changes is how far it carries, which is what
-    /// <see cref="JumpReach"/> knows.
-    /// </para>
-    /// <para>
-    /// The nearest landing wins, and walking is preferred to sprinting wherever
-    /// both reach: the slower the take-off, the more say there is in where it
-    /// comes down.
-    /// </para>
-    /// </remarks>
-    private (Move Move, double Cost)? JumpAcross(Vector3i from, Vector3i direction, bool maySprint)
-    {
-        // Something to jump over. A floor next door is a walk, and a wall is a
-        // step up; neither is this.
-        if (CanStandAt(Offset(from, direction)) || IsBlocked(Offset(from, direction)))
-            return null;
-
-        // Room to get off the ground in the first place.
-        if (!IsPassable(Above(Above(from))))
-            return null;
-
-        var length = Length(direction);
-        var reach = JumpReach.Furthest(maySprint, JumpReach.LowestLanding);
-
-        for (var steps = 2; steps * length <= reach; steps++)
-        {
-            // Everything flown over has to be clear, head height and all: the
-            // player rises more than a block on the way across, so a ceiling
-            // turns a jump into a bang on the head and a fall into the gap.
-            if (!CanFlyOver(Offset(from, direction * (steps - 1)), direction))
-                return null;
-
-            if (LandingAt(from, direction, steps, maySprint) is { } landing)
-                return landing;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Whether the player would pass through a block on the way across without
-    /// catching anything.
-    /// </summary>
-    private bool CanFlyOver(Vector3i over, Vector3i direction)
-        => !IsBlocked(over)
-        && IsPassable(Above(Above(over)))
-        && (direction.X == 0 || direction.Z == 0 || CornerIsClear(over, direction));
-
-    /// <summary>
-    /// The best landing a given number of blocks out, at whatever height the
-    /// jump can be aimed at.
-    /// </summary>
-    /// <remarks>
-    /// Highest first, because coming down onto a ledge is worth more than
-    /// dropping past it, and a lower landing is still available from there as a
-    /// plain fall.
-    /// </remarks>
-    private (Move Move, double Cost)? LandingAt(Vector3i from, Vector3i direction, int steps, bool maySprint)
-    {
-        var distance = steps * Length(direction);
-        var across = Offset(from, direction * steps);
-
-        for (var rise = JumpReach.HighestLanding; rise >= JumpReach.LowestLanding; rise--)
-        {
-            var landing = new Vector3i(across.X, from.Y + rise, across.Z);
-
-            if (!CanStandAt(landing))
-                continue;
-
-            if (distance <= JumpReach.Furthest(sprinting: false, rise))
-                return (new JumpGap(landing, steps - 1), JumpGapCost + (steps - 1) * JumpBlockCost);
-
-            if (maySprint && distance <= JumpReach.Furthest(sprinting: true, rise))
-                return (new JumpGap(landing, steps - 1, Sprinting: true),
-                    SprintJumpCost + (steps - 1) * JumpBlockCost);
-        }
-
-        return null;
-    }
-
-    /// <summary>How far a step in a direction actually covers, in blocks.</summary>
-    private static double Length(Vector3i direction)
-        => direction.X != 0 && direction.Z != 0 ? Math.Sqrt(2) : 1;
-
-    /// <summary>
-    /// Whether the player fits at a position and would survive being there: two
-    /// blocks of room, something solid to stand on, and nothing that hurts.
-    /// </summary>
-    private bool CanStandAt(Vector3i position)
-        => IsPassable(position)
-        && IsPassable(Above(position))
-        && !IsPassable(Below(position))
-        && IsSafeAt(position);
-
-    /// <summary>
-    /// Whether standing at a position would damage the player.
-    /// </summary>
-    /// <remarks>
-    /// Checked on the two blocks the body occupies and the one it stands on,
-    /// because magma burns through boots while lava and fire burn what is in
-    /// them. Drowning is asked about head height only, so that wading through
-    /// something shallow stays allowed.
-    /// </remarks>
-    private bool IsSafeAt(Vector3i position)
-    {
-        var head = world.GetBlock(Above(position));
-
-        return !BlockHazard.IsHarmful(world.GetBlock(position))
-            && !BlockHazard.IsHarmful(head)
-            && !BlockHazard.IsHarmful(world.GetBlock(Below(position)))
-            && !BlockHazard.Drowns(head);
-    }
-
-    /// <summary>Whether a position is obstructed at either body height.</summary>
-    private bool IsBlocked(Vector3i position)
-        => !IsPassable(position) || !IsPassable(Above(position));
-
-    private bool IsPassable(Vector3i position)
-        => !BlockCollision.IsSolid(world.GetBlock(position));
 
     /// <summary>
     /// The least this could possibly still cost, in ticks.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Horizontal distance only, priced as if every block of it were a plain
+    /// The horizontal distance is priced as if every block of it were a plain
     /// walk, which is the cheapest thing the player can do per block. Nothing
-    /// the search can plan beats it: a jump covers more ground per move but
-    /// costs far more than the walks it replaces, and so does a drop.
+    /// the search can plan beats it by much: a jump covers more ground per move
+    /// but costs far more than the walks it replaces, and so does a drop.
     /// </para>
     /// <para>
     /// The distance is measured the way the player is allowed to move, taking
@@ -872,21 +451,47 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// blocks each would overestimate, and an A* whose guess is too high stops
     /// being the cheapest route and becomes merely a route.
     /// </para>
+    /// <para>
+    /// Height still to climb is added on top, because every block of it takes a
+    /// step up at the least. Without it, a goal on a hill looks as close as one
+    /// at the foot of it, and the search spreads out around the bottom before it
+    /// tries going up.
+    /// </para>
+    /// <para>
+    /// Height still to lose is added as well, for the same reason the other way
+    /// round: ore fifteen blocks down looks no further from any place on the
+    /// surface above it than from the bottom of a shaft. Going down is cheap
+    /// where there is a slope or a drop, so without digging this is only a
+    /// little; with digging, it is what the cheapest block dug down costs, a
+    /// guess rather than a bound. Where there is a cheaper way down after all,
+    /// taking it gets closer faster, so the search still finds it first.
+    /// </para>
     /// </remarks>
-    private static double Heuristic(Vector3i from, Vector3i to, bool diagonals, double perBlock = WalkCost)
+    private static double Heuristic(Cell from, Target target, bool diagonals, double perBlockDown)
     {
-        var dx = Math.Abs(from.X - to.X);
-        var dz = Math.Abs(from.Z - to.Z);
+        var dx = Math.Abs(from.X - target.Position.X);
+        var dz = Math.Abs(from.Z - target.Position.Z);
 
-        if (!diagonals)
-            return (dx + dz) * perBlock;
+        double horizontal;
 
-        // Every block of the shorter leg can be walked off as part of a
-        // diagonal, at the cost of one corner-to-corner step rather than two
-        // straight ones.
-        var diagonal = Math.Min(dx, dz);
+        if (diagonals)
+        {
+            // Every block of the shorter leg can be walked off as part of a
+            // diagonal, at the cost of one corner-to-corner step rather than two
+            // straight ones.
+            var diagonal = Math.Min(dx, dz);
 
-        return (dx + dz - 2 * diagonal + diagonal * Math.Sqrt(2)) * perBlock;
+            horizontal = dx + dz - 2 * diagonal + diagonal * Math.Sqrt(2);
+        }
+        else
+        {
+            horizontal = dx + dz;
+        }
+
+        var climb = Math.Max(0, target.Position.Y - from.Y - target.VerticalSlack);
+        var descent = Math.Max(0, from.Y - target.Position.Y - target.DropSlack);
+
+        return Math.Max(0, horizontal - target.Slack) * Costs.Walk + climb * Costs.Climb + descent * perBlockDown;
     }
 
     /// <summary>
@@ -899,20 +504,26 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// floor below" puts the search three blocks lower than the player really
     /// is, and every route it plans from there is wrong.
     /// </remarks>
-    private Vector3i StandingBlockFor(Vector3d position)
+    private Cell StandingBlockFor(SearchContext context, Vector3d position)
     {
-        var feet = position.ToBlockPosition();
+        Cell feet = position.ToBlockPosition();
 
-        if (CanStandAt(feet))
+        if (context.CanBeAt(feet))
             return feet;
+
+        // On top of something a little short of a full block, such as a path
+        // or soul sand: the feet are inside it, and the search thinks of the
+        // player as standing on it.
+        if (context.IsSolid(feet) && context.CanStandAt(feet.Above))
+            return feet.Above;
 
         // Straddling an edge: whichever of the blocks under the player's box
         // holds it up is where it is really standing.
         foreach (var column in PlayerHitbox.ColumnsUnder(position))
         {
-            var candidate = new Vector3i(column.X, feet.Y, column.Z);
+            var candidate = new Cell(column.X, feet.Y, column.Z);
 
-            if (candidate != feet && CanStandAt(candidate))
+            if (candidate != feet && context.CanStandAt(candidate))
             {
                 logger.LogDebug("Standing on {Candidate}, not {Feet}, which its middle only hangs over", candidate, feet);
 
@@ -920,8 +531,23 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
             }
         }
 
+        // Under water: the way anywhere starts with coming up for air.
+        if (context.IsWater(feet))
+        {
+            for (var rise = 1; rise <= HeightSearchRange; rise++)
+            {
+                var surface = feet with { Y = feet.Y + rise };
+
+                if (context.CanBeAt(surface))
+                    return surface;
+
+                if (!context.IsWater(surface))
+                    break;
+            }
+        }
+
         // Nothing underneath anywhere, so it is on its way down.
-        return StandingPositionFor(feet);
+        return StandingPositionFor(context, feet);
     }
 
     /// <summary>
@@ -933,16 +559,16 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// can survive is not something to plan around, so the search is left to
     /// start where it was told and fail honestly.
     /// </remarks>
-    private Vector3i StandingPositionFor(Vector3i position)
+    private static Cell StandingPositionFor(SearchContext context, Cell position)
     {
-        for (var drop = 1; drop <= MaxFallHeight; drop++)
+        for (var drop = 1; drop <= Dropping.MaxFallHeight; drop++)
         {
-            var below = new Vector3i(position.X, position.Y - drop, position.Z);
+            var below = position with { Y = position.Y - drop };
 
-            if (CanStandAt(below))
+            if (context.CanStandAt(below))
                 return below;
 
-            if (!IsPassable(below))
+            if (!context.IsPassable(below))
                 break;
         }
 
@@ -959,7 +585,7 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
     /// because that is where the ground tends to be for anything it can already
     /// see.
     /// </remarks>
-    private Vector3i? NearestKnownTowards(Vector3i start, Vector3i goal)
+    private static Cell? NearestKnownTowards(SearchContext context, Cell start, Cell goal)
     {
         var steps = Math.Max(Math.Abs(goal.X - start.X), Math.Abs(goal.Z - start.Z));
 
@@ -975,56 +601,127 @@ internal class AStarPathfinder(IWorldManager world, ILogger<AStarPathfinder> log
 
             for (var offset = 0; offset <= HeightSearchRange; offset++)
             {
-                if (CanStandAt(new Vector3i(x, start.Y + offset, z)))
-                    return new Vector3i(x, start.Y + offset, z);
+                if (context.CanStandAt(new Cell(x, start.Y + offset, z)))
+                    return new Cell(x, start.Y + offset, z);
 
-                if (offset > 0 && CanStandAt(new Vector3i(x, start.Y - offset, z)))
-                    return new Vector3i(x, start.Y - offset, z);
+                if (offset > 0 && context.CanStandAt(new Cell(x, start.Y - offset, z)))
+                    return new Cell(x, start.Y - offset, z);
             }
         }
 
         return null;
     }
 
-    private static Route Reconstruct(
-        Dictionary<Node, (Node From, Move Move)> cameFrom,
-        Node searchFrom,
-        Node goal,
-        bool reachesGoal,
-        Vector3i origin)
+    private static Route Reconstruct(List<Node> nodes, int goal, bool reachesGoal, Cell origin, bool truncated)
     {
         var moves = new List<Move>();
 
-        for (var node = goal; node != searchFrom;)
-        {
-            var (from, move) = cameFrom[node];
-
-            moves.Add(move);
-            node = from;
-        }
+        for (var at = goal; nodes[at].Parent >= 0; at = nodes[at].Parent)
+            moves.Add(nodes[at].Arrival.ToMove());
 
         moves.Reverse();
 
-        return new Route(moves, reachesGoal, origin);
+        return new Route(moves, reachesGoal && !truncated, origin.ToVector3i(), truncated);
     }
 
-    private static Vector3i Offset(Vector3i position, Vector3i by)
-        => new(position.X + by.X, position.Y + by.Y, position.Z + by.Z);
-
-    private static Vector3i Above(Vector3i position)
-        => new(position.X, position.Y + 1, position.Z);
-
-    private static Vector3i Below(Vector3i position)
-        => new(position.X, position.Y - 1, position.Z);
+    /// <summary>
+    /// Where a search is headed, and how much leeway arriving has.
+    /// </summary>
+    /// <param name="Position">Where arriving happens.</param>
+    /// <param name="Slack">
+    /// How far short of <paramref name="Position"/>, sideways, arriving can
+    /// already be, so that the estimate stays below the real cost.
+    /// </param>
+    /// <param name="VerticalSlack">The same, for how far below it.</param>
+    /// <param name="DropSlack">The same, for how far above it.</param>
+    private readonly record struct Target(Cell Position, double Slack, int VerticalSlack, int DropSlack);
 
     /// <summary>
-    /// A place in the search: the block being stood on, and which way the player
-    /// was walking when it arrived there.
+    /// A place in the search: a block being stood on, the cheapest known way
+    /// to it, and the move that way ends with.
     /// </summary>
     /// <param name="Position">The block being stood on.</param>
-    /// <param name="Direction">
-    /// Index into the directions this search steps in, or
-    /// <see cref="NoDirection"/> for the position the search started from.
-    /// </param>
-    private readonly record struct Node(Vector3i Position, int Direction);
+    /// <param name="Cost">The cheapest way here found so far.</param>
+    /// <param name="Estimate">What the rest is guessed to cost, worked out once.</param>
+    /// <param name="Parent">The node this way comes from, or -1 for the start.</param>
+    /// <param name="Heading">Which way the player was going when it arrived, for pricing a turn.</param>
+    /// <param name="Arrival">The move that got it here.</param>
+    /// <param name="Placed">How many blocks the way here places.</param>
+    private record struct Node(Cell Position, double Cost, double Estimate, int Parent, int Heading, Step Arrival, int Placed)
+    {
+        /// <summary>Whether the cheapest way here is settled and the node has been looked beyond.</summary>
+        public bool Closed { get; set; }
+    }
+
+    /// <summary>
+    /// Which node to look at next: the lowest total, and among equal totals the
+    /// one closest to the goal.
+    /// </summary>
+    /// <remarks>
+    /// On open ground a great many positions tie on total, and without the
+    /// second rule the search looks at all of them. Preferring the one nearer
+    /// the goal has it follow one of them to the end instead.
+    /// </remarks>
+    private readonly record struct Priority(double Total, double Estimate)
+    {
+        public static IComparer<Priority> Comparer { get; } = Comparer<Priority>.Create(static (left, right) =>
+        {
+            // Totals built up along different ways are not added up in the same
+            // order, so two that ought to be equal can differ in the last
+            // digit. That is not a difference worth ordering by.
+            const double tolerance = 1e-9;
+
+            if (Math.Abs(left.Total - right.Total) > tolerance)
+                return left.Total.CompareTo(right.Total);
+
+            return left.Estimate.CompareTo(right.Estimate);
+        });
+    }
+
+    /// <summary>
+    /// The most promising places the search has reached, for when it has to
+    /// stop before it gets to the goal.
+    /// </summary>
+    private sealed class PartialRoutes(Cell origin)
+    {
+        private readonly int[] _best = Enumerable.Repeat(-1, _partialWeights.Length).ToArray();
+        private readonly double[] _score = Enumerable.Repeat(double.PositiveInfinity, _partialWeights.Length).ToArray();
+
+        public void Consider(int index, in Node node)
+        {
+            for (var i = 0; i < _partialWeights.Length; i++)
+            {
+                var score = node.Estimate + node.Cost / _partialWeights[i];
+
+                if (score < _score[i])
+                {
+                    _score[i] = score;
+                    _best[i] = index;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The most careful pick that still gets the player far enough to be
+        /// worth it, or null if none does.
+        /// </summary>
+        public int? Best(List<Node> nodes)
+        {
+            foreach (var best in _best)
+            {
+                if (best < 0)
+                    continue;
+
+                var position = nodes[best].Position;
+                var dx = position.X - origin.X;
+                var dy = position.Y - origin.Y;
+                var dz = position.Z - origin.Z;
+
+                if (dx * dx + dy * dy + dz * dz > MinimumProgress * MinimumProgress)
+                    return best;
+            }
+
+            return null;
+        }
+    }
 }

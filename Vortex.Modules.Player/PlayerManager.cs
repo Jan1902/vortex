@@ -38,6 +38,7 @@ internal class PlayerManager(
     /// taken, and is reacted to on the tick after the bump.
     /// </summary>
     private bool _wasBlocked;
+    private bool _inWater;
     private float _yaw;
     private float _pitch;
 
@@ -214,7 +215,7 @@ internal class PlayerManager(
         MovementState state;
 
         lock (_stateLock)
-            state = new MovementState(_position, _velocity, _onGround, _wasBlocked);
+            state = new MovementState(_position, _velocity, _onGround, _wasBlocked, _inWater);
 
         var step = physics.Step(state.Position, state.Velocity, state.OnGround, movement.Tick(state));
 
@@ -224,6 +225,7 @@ internal class PlayerManager(
             _velocity = step.Velocity;
             _onGround = step.OnGround;
             _wasBlocked = step.Blocked;
+            _inWater = step.InWater;
         }
 
         await SendMovement();

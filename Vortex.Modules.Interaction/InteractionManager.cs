@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Vortex.Modules.Interaction.Abstraction;
 using Vortex.Modules.Networking.Abstraction;
 using Vortex.Shared;
@@ -49,14 +50,31 @@ internal class InteractionManager(INetworkingManager networking, ActionSequencer
 
         try
         {
-            // Swinging all along is what a player does; the server does not
-            // need it, but others see the bot working.
-            for (var tick = 0; tick <= ticks; tick++)
-            {
-                if (tick % SwingInterval == 0)
-                    await networking.SendPacket(new Swing(Hand.Main));
+            // Timed by the clock rather than by counting delays: a delay of a
+            // tick takes longer than a tick, a quarter longer on Windows, whose
+            // timer only fires every sixteen milliseconds or so. Counted up over
+            // a long dig, that had the bot still digging well after the server
+            // had it broken.
+            var duration = Tick * ticks;
+            var clock = Stopwatch.StartNew();
+            var lastSwing = -1;
 
-                await Task.Delay(Tick, cancellationToken);
+            while (clock.Elapsed < duration)
+            {
+                // Swinging all along is what a player does; the server does
+                // not need it, but others see the bot working.
+                var swing = (int)(clock.Elapsed / Tick) / SwingInterval;
+
+                if (swing != lastSwing)
+                {
+                    lastSwing = swing;
+                    await networking.SendPacket(new Swing(Hand.Main));
+                }
+
+                var left = duration - clock.Elapsed;
+
+                if (left > TimeSpan.Zero)
+                    await Task.Delay(left < Tick ? left : Tick, cancellationToken);
             }
         }
         catch (OperationCanceledException)

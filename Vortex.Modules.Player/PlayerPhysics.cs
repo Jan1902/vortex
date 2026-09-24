@@ -61,6 +61,41 @@ internal class PlayerPhysics(IWorldManager world)
     /// <summary>Height of the player's bounding box, measured up from its feet.</summary>
     public const double Height = PlayerHitbox.Height;
 
+    /// <summary>
+    /// How much of its speed the player keeps from one tick to the next in
+    /// water, every way.
+    /// </summary>
+    public const double WaterDrag = 0.8;
+
+    /// <summary>How much speed the player can add in water each tick by holding a direction.</summary>
+    public const double WaterControl = 0.02;
+
+    /// <summary>
+    /// How fast water lets the player sink: a sixteenth of the pull in the air.
+    /// </summary>
+    public const double WaterGravity = Gravity / 16;
+
+    /// <summary>
+    /// What holding jump in water adds to the upward speed each tick. Enough to
+    /// rise against <see cref="WaterGravity"/> and bob at the surface.
+    /// </summary>
+    public const double SwimUp = 0.04;
+
+    /// <summary>
+    /// The upward speed a swimmer gets on pushing against a bank it could be
+    /// on top of, which is how the game lets the player climb out of water.
+    /// </summary>
+    public const double ClimbOutOfWater = 0.3;
+
+    /// <summary>
+    /// How high up its block the top of water reaches: the surface of a lake
+    /// sits a little below the top of the block it is in.
+    /// </summary>
+    public const double WaterSurface = 8.0 / 9;
+
+    /// <summary>How far above the player a bank may be to be climbed out onto.</summary>
+    private const double ClimbOutReach = 0.6;
+
     /// <summary>Velocities below this are treated as standing still.</summary>
     private const double NegligibleVelocity = 0.003;
 
@@ -88,14 +123,22 @@ internal class PlayerPhysics(IWorldManager world)
     /// <param name="input">What the player is trying to do.</param>
     public PhysicsStep Step(Vector3d position, Vector3d velocity, bool onGround, MovementInput input)
     {
-        var horizontal = Steer(velocity, onGround, input);
+        var inWater = IsInWater(position);
 
-        var jumping = input.Jump && onGround;
+        var horizontal = inWater
+            ? Swim(velocity, input)
+            : Steer(velocity, onGround, input);
 
-        var verticalVelocity = jumping
-            // A jump replaces this tick's fall instead of being damped by it.
-            ? JumpVelocity
-            : Math.Max((velocity.Y - Gravity) * VerticalDrag, -TerminalVelocity);
+        // In water jump means swim up, whether or not there is ground
+        // underfoot: the player does not leap off the bottom of a pool.
+        var jumping = !inWater && input.Jump && onGround;
+
+        var verticalVelocity = inWater
+            ? velocity.Y * WaterDrag - WaterGravity + (input.Jump ? SwimUp : 0)
+            : jumping
+                // A jump replaces this tick's fall instead of being damped by it.
+                ? JumpVelocity
+                : Math.Max((velocity.Y - Gravity) * VerticalDrag, -TerminalVelocity);
 
         var y = ResolveVertical(position, verticalVelocity, out var landed);
 
@@ -116,13 +159,59 @@ internal class PlayerPhysics(IWorldManager world)
         var afterX = ResolveHorizontal(afterVertical, Damp(horizontal.X), Axis.X, mayStepUp, protectFromLedges, out var blockedX);
         var afterZ = ResolveHorizontal(afterX, Damp(horizontal.Z), Axis.Z, mayStepUp, protectFromLedges, out var blockedZ);
 
+        // Swimming into a bank with room on top of it: the game lifts the
+        // player out of the water, which is the only way to get onto a bank
+        // higher than the surface.
+        if (inWater && (blockedX || blockedZ) && CanClimbOut(afterZ, horizontal))
+            verticalVelocity = ClimbOutOfWater;
+
         var newVelocity = new Vector3d(
             blockedX ? 0 : Damp(horizontal.X),
             verticalVelocity,
             blockedZ ? 0 : Damp(horizontal.Z));
 
-        return new PhysicsStep(afterZ, newVelocity, landed || IsSupported(afterZ), blockedX || blockedZ);
+        return new PhysicsStep(afterZ, newVelocity, landed || IsSupported(afterZ), blockedX || blockedZ, inWater);
     }
+
+    /// <summary>
+    /// Whether any part of the player is below the surface of water.
+    /// </summary>
+    public bool IsInWater(Vector3d position)
+    {
+        var bottom = (int)Math.Floor(position.Y);
+        var top = (int)Math.Floor(position.Y + Height - Epsilon);
+
+        foreach (var (blockX, blockZ) in Footprint(position))
+            for (var blockY = bottom; blockY <= top; blockY++)
+                if (world.GetBlock(new Vector3i(blockX, blockY, blockZ))?.Block is Data.Block.Water or Data.Block.BubbleColumn
+                    && blockY + WaterSurface > position.Y)
+                    return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// The horizontal velocity in water: whatever the player had, slowed by
+    /// the water, plus a little push in the direction it is swimming.
+    /// </summary>
+    private static Vector3d Swim(Vector3d velocity, MovementInput input)
+    {
+        var drifting = new Vector3d(velocity.X * WaterDrag, 0, velocity.Z * WaterDrag);
+
+        if (input.Direction is null)
+            return drifting;
+
+        var stroke = Normalize(input.Direction) * WaterControl;
+
+        return new Vector3d(drifting.X + stroke.X, 0, drifting.Z + stroke.Z);
+    }
+
+    /// <summary>
+    /// Whether the player, pushing against something in water, would fit a
+    /// little higher up and a little further on: over the top of a bank.
+    /// </summary>
+    private bool CanClimbOut(Vector3d position, Vector3d push)
+        => !CollidesAt(new Vector3d(position.X + push.X, position.Y + ClimbOutReach, position.Z + push.Z));
 
     /// <summary>
     /// The horizontal velocity the player is trying for this tick.
@@ -367,4 +456,5 @@ internal class PlayerPhysics(IWorldManager world)
 /// <param name="Velocity">The new velocity.</param>
 /// <param name="OnGround">Whether the player is standing on solid ground.</param>
 /// <param name="Blocked">Whether horizontal movement was stopped by geometry.</param>
-internal record PhysicsStep(Vector3d Position, Vector3d Velocity, bool OnGround, bool Blocked);
+/// <param name="InWater">Whether the player was in water for this tick.</param>
+internal record PhysicsStep(Vector3d Position, Vector3d Velocity, bool OnGround, bool Blocked, bool InWater = false);

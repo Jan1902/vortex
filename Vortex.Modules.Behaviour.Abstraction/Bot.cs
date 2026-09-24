@@ -45,7 +45,10 @@ public sealed class Bot(
     /// <summary>Cancels whatever is running; tasks pass it to anything that waits.</summary>
     public CancellationToken Cancellation { get; set; }
 
-    /// <summary>Whether routes may go through blocks, breaking them on the way.</summary>
+    /// <summary>
+    /// Whether routes may change the world on the way: break blocks to get
+    /// through, and place the bot's throwaway blocks to get up or across.
+    /// </summary>
     public bool MayDig { get; set; }
 
     /// <summary>The tasks running right now, outermost first.</summary>

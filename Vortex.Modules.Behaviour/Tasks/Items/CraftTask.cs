@@ -4,6 +4,7 @@ using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Blocks;
 using Vortex.Modules.Behaviour.Tasks.Container;
 using Vortex.Modules.Behaviour.Tasks.Helper;
+using Vortex.Modules.Behaviour.Tasks.Navigation;
 using Vortex.Modules.Crafting.Abstraction;
 using Vortex.Modules.Inventory.Abstraction;
 using Vortex.Shared;
@@ -25,9 +26,19 @@ public class CraftTask(Item item, int count) : BotTask
     /// <summary>How far around the bot a crafting table is looked for.</summary>
     private const int TableSearchRadius = 6;
 
-    /// <summary>Where a carried crafting table may be put, relative to the bot's feet.</summary>
-    private static readonly Vector3i[] TableSpots =
-        [new(2, 0, 0), new(-2, 0, 0), new(0, 0, 2), new(0, 0, -2), new(2, 0, 2), new(-2, 0, -2), new(2, 0, -2), new(-2, 0, 2)];
+    /// <summary>How far to each side, and how far up and down, of the bot's feet a table may be put.</summary>
+    private const int TableReach = 2;
+
+    /// <summary>How often a spot for the table is looked for, walking on in between.</summary>
+    private const int TableAttempts = 3;
+
+    /// <summary>How far, in blocks, the bot walks on to look for room.</summary>
+    private const int MoveDistance = 4;
+
+    private static readonly Vector3i[] MoveDirections = [new(1, 0, 0), new(0, 0, 1), new(-1, 0, 0), new(0, 0, -1)];
+
+    private static readonly Vector3i[] SupportSides =
+        [new(0, -1, 0), new(1, 0, 0), new(-1, 0, 0), new(0, 0, 1), new(0, 0, -1), new(0, 1, 0)];
 
     /// <summary>The item being crafted, so that nothing is made out of itself further down.</summary>
     public Item Item => item;
@@ -113,8 +124,10 @@ public class CraftTask(Item item, int count) : BotTask
     {
         if (FindTable(bot) is not { } table)
         {
-            if (FindSpotForTable(bot) is not { } spot)
-                return TaskResult.Failed("no room next to the bot to put a crafting table down");
+            var spot = await FindSpotMovingOnAsync(bot);
+
+            if (spot is null)
+                return TaskResult.Failed($"no room to put a crafting table down, not even after moving on {TableAttempts - 1} times");
 
             var placed = await bot.Run(new PlaceBlockTask(Item.CraftingTable, spot));
 
@@ -127,25 +140,103 @@ public class CraftTask(Item item, int count) : BotTask
         return await bot.Run(new OpenContainerTask(table));
     }
 
+    /// <summary>
+    /// A spot for the table where the bot stands; failing that, after walking a
+    /// few blocks off in another direction each time, up to <see cref="TableAttempts"/> tries in all.
+    /// </summary>
+    private static async Task<Vector3i?> FindSpotMovingOnAsync(Bot bot)
+    {
+        for (var attempt = 0; attempt < TableAttempts; attempt++)
+        {
+            if (FindSpotForTable(bot) is { } spot)
+                return spot;
+
+            if (attempt == TableAttempts - 1)
+                break;
+
+            bot.Logger.LogDebug("No room for a crafting table here, moving on (try {Attempt} of {Attempts})", attempt + 1, TableAttempts);
+
+            // Each try starts with a different direction, and takes the next
+            // one round if there is nowhere to stand or no way there.
+            for (var i = 0; i < MoveDirections.Length; i++)
+            {
+                var direction = MoveDirections[(attempt + i) % MoveDirections.Length];
+
+                if (FindStandingSpot(bot, direction) is { } stand
+                    && (await bot.Run(new GoToTask(stand))).IsSuccess)
+                    break;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Somewhere to stand a few blocks off in a direction, a step or two up or down.</summary>
+    private static Vector3i? FindStandingSpot(Bot bot, Vector3i direction)
+    {
+        var feet = bot.Player.Position.ToBlockPosition();
+
+        for (var distance = MoveDistance; distance >= 2; distance--)
+        for (var dy = 0; dy <= 2; dy++)
+        foreach (var y in dy == 0 ? new[] { 0 } : new[] { dy, -dy })
+        {
+            var spot = feet + new Vector3i(direction.X * distance, y, direction.Z * distance);
+
+            if (bot.World.GetBlock(spot) is not null
+                && !BlockCollision.IsSolid(bot.World.GetBlock(spot))
+                && !BlockCollision.IsSolid(bot.World.GetBlock(spot + new Vector3i(0, 1, 0)))
+                && BlockCollision.IsSolid(bot.World.GetBlock(spot + new Vector3i(0, -1, 0))))
+                return spot;
+        }
+
+        return null;
+    }
+
     private static Vector3i? FindTable(Bot bot)
         => bot.World
             .FindBlocks(bot.Player.Position.ToBlockPosition(), TableSearchRadius, state => state.Block == Block.CraftingTable, limit: 1)
             .Cast<Vector3i?>()
             .FirstOrDefault();
 
+    /// <summary>
+    /// The nearest free block around the bot with something solid next to it to
+    /// lean the table against, one with ground under it first. Slopes and trees
+    /// leave no flat ground, so blocks a step up or down count as well.
+    /// </summary>
     private static Vector3i? FindSpotForTable(Bot bot)
     {
         var feet = bot.Player.Position.ToBlockPosition();
+        Vector3i? best = null;
+        var bestCost = int.MaxValue;
 
-        foreach (var offset in TableSpots)
+        for (var dy = -1; dy <= 1; dy++)
+        for (var dx = -TableReach; dx <= TableReach; dx++)
+        for (var dz = -TableReach; dz <= TableReach; dz++)
         {
-            var spot = feet + offset;
+            // Not where the bot stands, nor where it would bump its head.
+            if (dx == 0 && dz == 0 && dy >= 0)
+                continue;
 
-            if (bot.World.GetBlock(spot)?.Block is Block.Air or Block.CaveAir
-                && BlockCollision.IsSolid(bot.World.GetBlock(spot + new Vector3i(0, -1, 0))))
-                return spot;
+            var spot = feet + new Vector3i(dx, dy, dz);
+
+            if (bot.World.GetBlock(spot) is not { } state || !PlaceBlockTask.IsReplaceable(state.Block))
+                continue;
+
+            var supports = SupportSides.Where(side => BlockCollision.IsSolid(bot.World.GetBlock(spot + side))).ToList();
+
+            if (supports.Count == 0)
+                continue;
+
+            var onGround = supports.Contains(new Vector3i(0, -1, 0));
+            var cost = (Math.Abs(dx) + Math.Abs(dz)) * 4 + Math.Abs(dy) * 2 + (onGround ? 0 : 3);
+
+            if (cost < bestCost)
+            {
+                best = spot;
+                bestCost = cost;
+            }
         }
 
-        return null;
+        return best;
     }
 }

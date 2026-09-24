@@ -154,6 +154,33 @@ public class RouteTests
         Assert.Equal(route.Destination, legs[^1]);
     }
 
+    [Fact]
+    public void CountsTheMovesAStraightWalkCovers()
+    {
+        var route = new Route([
+            new Walk(new(1, 64, 0)),
+            new Walk(new(2, 64, 0)),
+            new Walk(new(2, 64, 1)),
+        ]);
+
+        Assert.Equal(2, route.StraightWalkLength(_start));
+        Assert.Equal(0, new Route([new StepUp(new(1, 65, 0))]).StraightWalkLength(_start));
+    }
+
+    [Fact]
+    public void WhatIsLeftStartsWhereTheLastMoveMadeEnded()
+    {
+        var route = WalkLine(new Vector3i(1, 0, 0), 5) with { Origin = _start, Truncated = true };
+
+        var rest = route.Skip(2);
+
+        Assert.Equal(new Vector3i(2, 64, 0), rest.Origin);
+        Assert.Equal([new(3, 64, 0), new(4, 64, 0), new(5, 64, 0)], rest.Positions);
+
+        // Still the same route, just less of it.
+        Assert.True(rest.Truncated);
+    }
+
     /// <summary>
     /// Follows a route the way the task does, taking the furthest walk in line
     /// each time, and reports the blocks it actually aimed at.

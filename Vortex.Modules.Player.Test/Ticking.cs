@@ -54,7 +54,7 @@ internal static class Ticking
             var step = physics.Step(
                 state.Position, state.Velocity, state.OnGround, controller.Tick(state));
 
-            state = new MovementState(step.Position, step.Velocity, step.OnGround, step.Blocked);
+            state = new MovementState(step.Position, step.Velocity, step.OnGround, step.Blocked, step.InWater);
         }
 
         Assert.True(movement.IsCompleted, "the movement never finished");

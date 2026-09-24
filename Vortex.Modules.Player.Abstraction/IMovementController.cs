@@ -87,6 +87,18 @@ public interface IMovementController
     Task<MovementResult> JumpTo(Vector3d takeOff, Vector3d landing, MovementMode mode = MovementMode.Walk);
 
     /// <summary>
+    /// Swims at the surface of water to a point, or walks into the water to
+    /// get there.
+    /// </summary>
+    /// <remarks>
+    /// Keeps the head above water on the way by holding jump, which in water
+    /// means swimming up. Done once the player is over the point, floating or
+    /// standing.
+    /// </remarks>
+    /// <param name="target">Where to end up.</param>
+    Task<MovementResult> SwimTo(Vector3d target);
+
+    /// <summary>
     /// Jumps once, if the player is on the ground.
     /// </summary>
     void Jump();

@@ -16,7 +16,10 @@ internal enum MovementKind
     Drop,
 
     /// <summary>Jumping from an edge across a gap.</summary>
-    Jump
+    Jump,
+
+    /// <summary>Swimming at the surface of water, or walking into it.</summary>
+    Swim
 }
 
 /// <summary>

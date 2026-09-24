@@ -125,6 +125,9 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
     public Task<MovementResult> JumpTo(Vector3d takeOff, Vector3d landing, MovementMode mode = MovementMode.Walk)
         => Start(new Movement(MovementKind.Jump, landing, mode, TakeOff: takeOff));
 
+    public Task<MovementResult> SwimTo(Vector3d target)
+        => Start(new Movement(MovementKind.Swim, target, MovementMode.Walk));
+
     public void Jump()
     {
         lock (_lock)
@@ -294,15 +297,15 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
             var push = left > DeadZone
                 && ShouldPush(state, speed, left);
 
-            var jump = !_jumped && state.OnGround && WantsJump(state);
+            var jump = !_jumped && state.OnGround && !state.InWater && WantsJump(state);
 
             _jumped |= jump;
 
             input = new MovementInput(
                 push ? toTarget : null,
                 movement.Mode,
-                jump,
-                AllowStepUp: movement.Kind is MovementKind.Walk or MovementKind.StepUp);
+                jump || KeepsHeadUp(state),
+                AllowStepUp: movement.Kind is MovementKind.Walk or MovementKind.StepUp or MovementKind.Swim);
 
             return null;
         }
@@ -343,6 +346,25 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
             }
         }
 
+        /// <summary>
+        /// Whether to hold jump to swim up: while swimming, and while climbing
+        /// out of the water onto a bank.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Pushing against a bank with the head up is what the game lifts out
+        /// of the water, so a step up out of it needs this too.
+        /// </para>
+        /// <para>
+        /// Not while walking. Water shallow enough to walk through is walked
+        /// along the bottom, and a walk is done standing on it. Swimming up off
+        /// the bottom on the way leaves the player bobbing at the surface,
+        /// touching the bottom only now and then, and the walk waiting for that.
+        /// </para>
+        /// </remarks>
+        private bool KeepsHeadUp(MovementState state)
+            => state.InWater && movement.Kind is MovementKind.StepUp or MovementKind.Swim;
+
         /// <summary>Whether this is the moment to jump, once per movement.</summary>
         private bool WantsJump(MovementState state)
             => movement.Kind switch
@@ -362,10 +384,33 @@ internal class MovementController(ILogger<MovementController> logger) : IMovemen
         /// <summary>How the movement ended, if it has.</summary>
         private (MovementResult, string?)? Outcome(MovementState state)
         {
+            var destination = movement.Destination;
+
+            // A swim is over once the player is over the point it was swimming
+            // to, however high it happens to be bobbing just then: in the water,
+            // on the bottom, or just above the surface.
+            if (movement.Kind == MovementKind.Swim)
+                return state.Position.HorizontalDistanceTo(destination) <= ArrivalTolerance
+                    ? (MovementResult.Arrived, null)
+                    : null;
+
+            // In water there is no ground to come down on. A drop is over once
+            // it has fallen in, judged by whether that was the right pool.
+            if (state.InWater && !state.OnGround)
+            {
+                return movement.Kind switch
+                {
+                    MovementKind.Drop when _leftGround
+                        => PlayerHitbox.ColumnsUnder(state.Position).Contains(new Vector2i((int)Math.Floor(destination.X), (int)Math.Floor(destination.Z)))
+                            ? (MovementResult.Arrived, null)
+                            : (MovementResult.Blocked, $"fell into the water at {state.Position.X:F1} {state.Position.Y:F1} {state.Position.Z:F1}"),
+
+                    _ => null,
+                };
+            }
+
             if (!state.OnGround)
                 return null;
-
-            var destination = movement.Destination;
 
             switch (movement.Kind)
             {

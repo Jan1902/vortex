@@ -34,7 +34,8 @@ public class OpenContainerTask(Vector3i target) : BotTask
         if (reached.IsFailure)
             return reached;
 
-        var face = await Aim.AtBlockAsync(bot.Player, target, bot.Cancellation);
+        if (await Aim.AtBlockAsync(bot, target) is not { } face)
+            return TaskResult.Failed($"cannot see the block at {target.X} {target.Y} {target.Z} to open it");
 
         bot.Logger.LogDebug("Opening the container at {X} {Y} {Z}", target.X, target.Y, target.Z);
 

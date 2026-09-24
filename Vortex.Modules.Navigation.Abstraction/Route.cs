@@ -24,7 +24,14 @@ namespace Vortex.Modules.Navigation.Abstraction;
 /// player's middle is over: at the lip of a drop its feet are on the ledge
 /// behind. Null for a route built by hand rather than searched.
 /// </param>
-public record Route(IReadOnlyList<Move> Moves, bool ReachesGoal = true, Vector3i? Origin = null)
+/// <param name="Truncated">
+/// Whether the search ran out of time before it got to the goal, and this is
+/// only as far as it got: the part of the way it was surest of. Walking it
+/// still gets the player closer, and the rest is searched from where it ends,
+/// which can start before this part has been walked. Unlike a route that stops
+/// at the edge of what is loaded, the world beyond this one is already known.
+/// </param>
+public record Route(IReadOnlyList<Move> Moves, bool ReachesGoal = true, Vector3i? Origin = null, bool Truncated = false)
 {
     /// <summary>Gets the move to make next, or null if there is none.</summary>
     public Move? Next
@@ -70,8 +77,20 @@ public record Route(IReadOnlyList<Move> Moves, bool ReachesGoal = true, Vector3i
     /// </returns>
     public Vector3i? FurthestWalk(Vector3i from)
     {
+        var count = StraightWalkLength(from);
+
+        return count == 0 ? null : Moves[count - 1].To;
+    }
+
+    /// <summary>
+    /// How many moves the walk <see cref="FurthestWalk"/> aims for covers: zero
+    /// when the route does not start with a walk.
+    /// </summary>
+    /// <param name="from">The block the walk starts from.</param>
+    public int StraightWalkLength(Vector3i from)
+    {
         if (Moves.Count == 0 || Moves[0] is not Walk first)
-            return null;
+            return 0;
 
         var direction = first.To - from;
         var furthest = 0;
@@ -83,6 +102,23 @@ public record Route(IReadOnlyList<Move> Moves, bool ReachesGoal = true, Vector3i
             furthest++;
         }
 
-        return Moves[furthest].To;
+        return furthest + 1;
+    }
+
+    /// <summary>
+    /// What is left of the route once the first few moves have been made: the
+    /// rest of the moves, starting from where the last of those ended.
+    /// </summary>
+    /// <param name="count">How many moves have been made.</param>
+    public Route Skip(int count)
+    {
+        if (count <= 0 || Moves.Count == 0)
+            return this;
+
+        return this with
+        {
+            Moves = Moves.Skip(count).ToList(),
+            Origin = Moves[Math.Min(count, Moves.Count) - 1].To,
+        };
     }
 }

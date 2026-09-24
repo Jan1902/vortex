@@ -1,6 +1,7 @@
 using Vortex.Data;
 using Vortex.Modules.Behaviour.Abstraction;
 using Vortex.Modules.Behaviour.Tasks.Helper;
+using Vortex.Modules.Inventory.Abstraction;
 
 namespace Vortex.Modules.Behaviour.Tasks.Container;
 
@@ -40,8 +41,29 @@ public class TakeItemsTask(IReadOnlySet<Item> items, int count) : BotTask
                 break;
 
             var before = Stacks.CountIn(items, bot.Inventory);
+            var take = count - before;
 
-            await bot.Inventory.QuickMoveAsync(slot);
+            if (window.Slots[slot]!.Count > take)
+            {
+                var targetSlot = bot.Inventory.FirstEmptySlot();
+                targetSlot = bot.Inventory.ToActiveWindowSlot(targetSlot) ?? -1;
+
+                if (targetSlot < 0)
+                    return TaskResult.Failed($"no room for {Stacks.Describe(items)}");
+
+                await bot.Inventory.PickUpAsync(slot);
+                for (var i = 0; i < take; i++)
+                {
+                    await bot.Inventory.ClickAsync(targetSlot, 1, ClickMode.PickUp);
+                }
+
+                await bot.Inventory.ClickAsync(slot, 0, ClickMode.PickUp);
+            }
+            else
+            {
+                await bot.Inventory.QuickMoveAsync(slot);
+            }
+
             await Task.Delay(100, bot.Cancellation);
 
             if (Stacks.CountIn(items, bot.Inventory) <= before)

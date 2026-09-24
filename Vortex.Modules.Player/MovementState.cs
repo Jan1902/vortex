@@ -16,7 +16,8 @@ namespace Vortex.Modules.Player;
 /// <param name="Velocity">How fast it is going, in blocks per tick.</param>
 /// <param name="OnGround">Whether it is standing on something.</param>
 /// <param name="Blocked">Whether the previous step was stopped by geometry.</param>
-internal record MovementState(Vector3d Position, Vector3d Velocity, bool OnGround, bool Blocked)
+/// <param name="InWater">Whether the player was in water for the previous step.</param>
+internal record MovementState(Vector3d Position, Vector3d Velocity, bool OnGround, bool Blocked, bool InWater = false)
 {
     /// <summary>Standing still at the origin, before the loop has reported anything.</summary>
     public static MovementState Unknown { get; } = new(Vector3d.Zero, Vector3d.Zero, OnGround: true, Blocked: false);

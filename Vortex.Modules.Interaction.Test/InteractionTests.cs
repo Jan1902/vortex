@@ -85,6 +85,20 @@ public class InteractionTests
     }
 
     [Fact]
+    public async Task DoesNotDigLongerThanItIsGiven()
+    {
+        // Two seconds of digging. Counted out a delay at a time, this took a
+        // quarter longer on Windows, long after the server had the block
+        // broken.
+        _networking.Server = ConfirmDigging;
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        Assert.True(await _interaction.DigAsync(new Vector3i(3, 64, 3), BlockFace.West, ticks: 40));
+
+        Assert.InRange(clock.Elapsed.TotalMilliseconds, 2000, 2150);
+    }
+
+    [Fact]
     public async Task OnlyStartsABlockThatBreaksAtOnce()
     {
         _networking.Server = ConfirmDigging;

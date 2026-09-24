@@ -71,6 +71,12 @@ internal class InventoryManager(INetworkingManager networking, IEventBus eventBu
             .ToList();
     }
 
+    public int FirstEmptySlot()
+    {
+        var slots = Player.Slots;
+        return PlayerSlots.Storage.FirstOrDefault(slot => slots[slot] is null, -1);
+    }
+
     public int SpaceFor(Item item)
     {
         var slots = Player.Slots;

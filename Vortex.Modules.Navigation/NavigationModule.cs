@@ -9,6 +9,7 @@ public class NavigationModule : IModule
     public void Load(ContainerBuilder builder)
     {
         builder.RegisterType<AStarPathfinder>().AsImplementedInterfaces().SingleInstance();
+        builder.RegisterInstance(PathfinderOptions.Default).AsSelf();
 
         // What a task gets when it does not ask for anything in particular.
         // Walking only, because every other ability has a cost or a risk that

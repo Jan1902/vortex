@@ -15,6 +15,12 @@ namespace Vortex.Shared;
 /// shapes are a separate piece of work.
 /// </remarks>
 /// <remarks>
+/// Two things are known on top of that, for the pathfinder, because treating
+/// those blocks as full cubes plans routes that cannot be walked: which blocks
+/// are too tall to climb (<see cref="IsTall"/>), and which have their top too
+/// far down to stand on as a full block (<see cref="HasLowTop"/>).
+/// </remarks>
+/// <remarks>
 /// Lives here rather than in the player module because the pathfinder asks the
 /// same question of the same block data, and the answer must not be allowed to
 /// drift apart between the two.
@@ -62,6 +68,70 @@ public static class BlockCollision
         // Azaleas count as saplings, but are bushes the player bumps into.
         .Concat(BlockTags.Saplings.Where(block => block is not (Block.Azalea or Block.FloweringAzalea)))
         .ToFrozenSet();
+
+    /// <summary>
+    /// Blocks that stand taller than a block: a block and a half.
+    /// </summary>
+    private static readonly FrozenSet<Block> _tall = BlockTags.Fences
+        .Concat(BlockTags.Walls)
+        .Concat(BlockTags.FenceGates)
+        .ToFrozenSet();
+
+    /// <summary>
+    /// Solid blocks whose top is well short of a full block: half a block or
+    /// less, or not much more.
+    /// </summary>
+    /// <remarks>
+    /// Only the ones where it matters. Blocks a sixteenth or two short of full,
+    /// such as paths, farmland or soul sand, are near enough to a full block to
+    /// stand on as one.
+    /// </remarks>
+    private static readonly FrozenSet<Block> _lowTop = new[]
+    {
+        Block.Repeater, Block.Comparator, Block.DaylightDetector,
+        Block.Stonecutter, Block.EnchantingTable,
+        Block.Cake,
+        Block.SculkSensor, Block.CalibratedSculkSensor, Block.SculkShrieker,
+        Block.LilyPad, Block.SeaPickle, Block.TurtleEgg,
+        Block.Lantern, Block.SoulLantern, Block.FlowerPot,
+        Block.Campfire, Block.SoulCampfire,
+    }
+        .Concat(BlockTags.Beds)
+        .Concat(BlockTags.Trapdoors)
+        .Concat(BlockTags.CandleCakes)
+        .Concat(BlockTags.FlowerPots)
+        .ToFrozenSet();
+
+    /// <summary>
+    /// Determines whether a block reaches higher than a full block, so that
+    /// the player can neither step onto it nor jump over it.
+    /// </summary>
+    /// <remarks>
+    /// Fences, walls and fence gates are a block and a half tall. Taken as full
+    /// blocks, they look like something to hop onto, and the jump that would
+    /// clear a block bumps into them instead.
+    /// </remarks>
+    public static bool IsTall(BlockState? state)
+        => state is not null && _tall.Contains(state.Block);
+
+    /// <summary>
+    /// Determines whether a solid block's top is too far below a full block to
+    /// be stood on as one.
+    /// </summary>
+    /// <remarks>
+    /// A player on a bottom slab or a bed stands half a block lower than one on
+    /// a full block. Treating it as full puts the player somewhere it is not.
+    /// </remarks>
+    public static bool HasLowTop(BlockState? state)
+    {
+        if (state is null)
+            return false;
+
+        if (BlockTags.Slabs.Contains(state.Block))
+            return state.Get(BlockProperties.Type) == TypeValue.Bottom;
+
+        return _lowTop.Contains(state.Block);
+    }
 
     /// <summary>
     /// Determines whether the player collides with a block.
